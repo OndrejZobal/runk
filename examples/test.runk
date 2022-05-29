@@ -1,0 +1,14 @@
+#!/bin/env runk
+# Runk is love runk is life
+
+# the most consequential figures in the tech world are half guys like steve jobs
+# and bill gates and half some guy named ronald who maintains a unix tool called
+# 'runk' which stands for Ronald's Universal Number Kounter and handles all math
+# for every machine on earth
+
+333
+
+# Integer
+Z var: -1
+# Natural number
+Z var1: -1
