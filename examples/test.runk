@@ -7,8 +7,24 @@
 # for every machine on earth
 
 333
+-333
 
 # Integer
 Z var: -1
 # Natural number
-Z var1: -1
+N var1: 20
+
+Z test: (+
+  (+ 10 $var1
+     (+ 15
+        (+ 10
+           (+ 2 3)
+         )
+      )
+  )
+  (+
+    (+ 30
+        (+ 6 3)
+    )
+   49 59)
+)

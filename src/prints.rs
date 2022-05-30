@@ -1,4 +1,4 @@
-use colored::Colorize;
+pub use colored::Colorize;
 use std::process;
 
 macro_rules! color_print {
@@ -8,14 +8,14 @@ macro_rules! color_print {
     }
 }
 
-pub fn syntax_error(filename: &str, line_number: &u64, message: String) {
+pub fn syntax_error(filename: &str, line_number: &u64, message: String) -> ! {
     color_print!("Syntax Error: ", red bold);
     eprintln!("{}:{}: {}", filename.bold(), line_number.to_string().bold(), message);
     process::exit(1);
 
 }
 
-pub fn runtime_error(filename: &str, line_number: &u64, message: String) {
+pub fn runtime_error(filename: &str, line_number: &u64, message: String) -> ! {
     color_print!("Runtime Error: ", red bold);
     eprintln!("{}:{}: {}", filename.bold(), line_number.to_string().bold(), message);
     process::exit(1);

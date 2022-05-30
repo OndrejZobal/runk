@@ -7,8 +7,12 @@ use colored::Colorize;
 mod prints;
 use prints::*;
 
-mod types;
-use types::*;
+#[path = "structs/mod.rs"]
+mod structs;
+use structs::{var::Var, assign::Assign, program_data::ProgramData, word::Word, line::Line};
+
+mod expressions;
+use expressions::resolve_exp;
 
 fn parse_assignment(input: &[Word], filename: &str, line_number: u64) -> Option<Assign> {
     // Nondeclarative
@@ -31,14 +35,14 @@ fn parse_assignment(input: &[Word], filename: &str, line_number: u64) -> Option<
         }
         return Some(Assign::Dec(
             match &input[0].string[..] {
-                "Z" => Num::Z(0),
-                "N" => Num::N(0),
+                "Z" => Var::Z(0),
+                "N" => Var::N(0),
                 &_  => {
                     syntax_error(filename, &line_number,
                                 format!("Unknown type \"{}\"",
                                         input[0].string.italic()));
                     // This is unreachable
-                    Num::Z(0)
+                    Var::Z(0)
                 }
             },
             input[1].string.clone()
@@ -52,7 +56,7 @@ fn parse_assignment(input: &[Word], filename: &str, line_number: u64) -> Option<
 fn execute_line(line: Line, data: &mut ProgramData) {
     // Processing assignment
     if line.assignment.is_none() {
-        color_print!("Not Assigned: ", bright_yellow);
+        color_print!("Not Assigned: ", yellow);
         eprintln!("{}", line.number);
         return;
     }
@@ -76,11 +80,11 @@ fn execute_line(line: Line, data: &mut ProgramData) {
             // New variable is beeing defined. We match agains the type specified
             // in 'line'
             match num {
-                Num::Z(z) => {
+                Var::Z(z) => {
                     // TODO assing simple expression
                     data.vars.insert(string, num);
                 },
-                Num::N(n) => {
+                Var::N(n) => {
                     // TODO assing simple expression
                     data.vars.insert(string, num);
                 },
@@ -96,94 +100,25 @@ fn execute_line(line: Line, data: &mut ProgramData) {
 
             // Modifing existing variable, need to maintain it's previous type.
             match data.vars.get(&string).unwrap() {
-                Num::Z(z) => {
+                Var::Z(z) => {
                     // TODO assing simple expression
-                    data.vars.insert(string, Num::Z(0));
+                    data.vars.insert(string, Var::Z(0));
                 },
-                Num::N(n) => {
+                Var::N(n) => {
                     // TODO assing simple expression
-                    data.vars.insert(string, Num::N(0));
+                    data.vars.insert(string, Var::N(0));
                 },
             }
         },
     }
 }
 
-fn resolve_simple_expression(word: &Word, file_name: &str, line_number: &u64) -> Num {
-    let num = (&word.string).parse::<u64>();
 
-    // At this point we are not sure what type this expression
-    // needs to be, so we just put it in the one that fits bets
-    // and if we later down the road need different types we
-    // can just convert it.
-    if num.is_ok() {
-        return Num::N(num.unwrap());
-    }
-
-    let num = (&word.string).parse::<i64>();
-    if num.is_ok() {
-        return Num::Z(num.unwrap());
-    }
-    else {
-        // Failed to parse as simple expression:
-        syntax_error(file_name, &line_number,
-                        format!("Invalid expression \"{}\"!", &word.string.italic())
-        );
-    }
-    Num::N(0) // unreachable
-}
-
-fn resolve_op(word: &Word) -> Op {
-    Op::Add
-}
-
-fn resolve_function_expression(input: &[Word], file_name: &str, line_number: &u64) -> Num {
-    let mut op: Option<Op> = None;
-    let mut operands: Vec<Num> = Vec::new();
-    for (i, word) in input.iter().enumerate() {
-        // First operand in a function is the operation.
-        if i == 0 {
-            op = Some(resolve_op(&word));
-            continue;
-        }
-
-        operands.push(resolve_exp(&input[i..], file_name, line_number));
-    }
-    Num::N(0) // unreachable
-}
-
-fn resolve_exp(input: &[Word], file_name: &str, line_number: &u64) -> Num {
-    // TODO Loop useless??
-    for (i, word) in input.iter().enumerate() {
-        // On first iteration we can determine, what kind of
-        // expression is this.
-        if i == 0 {
-            // Simple expression
-            if input.len() == 1 {
-                return resolve_simple_expression(word, file_name, line_number);
-            }
-
-            // Function expression
-            if word.string == "(" {
-                todo!();
-                return resolve_function_expression(&input[i+1..], file_name, line_number);
-            }
-        }
-    }
-
-    // If nothing was returned yet...
-    syntax_error(file_name, &line_number,
-                    format!("All hell broke loose when processing an expression!")
-    );
-    Num::N(0) // unreachable
-}
-
-
-fn parse_line<'a>(input: &'a Vec::<Word>, filename: &'a str, line_number: u64) -> Line<'a> {
+fn parse_line<'a>(input: &'a Vec::<Word>, filename: &'a str, line_number: u64, data: &ProgramData) -> Line<'a> {
 
     for (i, word) in input.iter().enumerate() {
         if i == 0 {
-            eprint!("{}", format!("RUN {}\t| ", word.line).yellow());
+            eprint!("{}", format!("RUN {}\t| ", word.line).bright_yellow());
         }
         eprint!("{} ", word.string);
     }
@@ -197,24 +132,29 @@ fn parse_line<'a>(input: &'a Vec::<Word>, filename: &'a str, line_number: u64) -
 
     // Parsing assignment
     let mut assign: Option<Assign> = None;
-    let mut expression_start_index: usize = 0;
+    let mut exp_start_index: usize = 0;
 
     // Look for the asssignment operator ":"
     for (i, word) in input.iter().enumerate() {
         if word.string == ":" {
             assign = parse_assignment(&input[..i], filename, line_number);
-            expression_start_index = i+1;
+            exp_start_index = i+1;
             break;
         }
     }
 
     // Check if expression is missing.
-    if input.len() <= expression_start_index {
+    if input.len() <= exp_start_index {
         syntax_error(filename, &line_number, "Missing expression!".to_string());
     }
 
     // Parsing expression
-    let num: Num = resolve_exp(&input[expression_start_index..], &&filename, &line_number);
+    let (num, exp_end_index) = resolve_exp(&input[exp_start_index..], &filename, &line_number, data);
+
+    if exp_start_index + exp_end_index != input.len() {
+        syntax_error(filename, &line_number, format!("Unexpected text after expression!"));
+    }
+
 
     let line = Line { assignment: assign, number: num, file_name: filename, line_number: line_number };
     line
@@ -297,7 +237,7 @@ fn process_file(input_file_reader: Box<dyn BufRead>, file_name: String, data: &m
         push_word!();
         if depth == 0 {
             if line.len() != 0 {
-                let parsed_line = parse_line(&line, &file_name, u64::try_from(i).unwrap()+1);
+                let parsed_line = parse_line(&line, &file_name, u64::try_from(i).unwrap()+1, &data);
                 execute_line(parsed_line, data);
                 line = Vec::<Word>::new();
             }
@@ -307,7 +247,7 @@ fn process_file(input_file_reader: Box<dyn BufRead>, file_name: String, data: &m
 
 fn print_banner() {
     color_print!("=======================================\n", bright_blue);
-    color_print!("Ridiculously Useless Numeric Katastrophe", blue);
+    color_print!("Ridiculously Useless Vareric Katastrophe", blue);
     color_print!("========================================\n", bright_blue);
 }
 
@@ -333,7 +273,7 @@ fn main() {
 
     eprintln!("{}", "DONE".green());
 
-    eprintln!("\nVariables:");
+    color_print!("\nVariables:\n", blue italic);
     for (key, val) in program_data.vars.iter() {
         eprintln!("{}: {}", key, val);
     }
