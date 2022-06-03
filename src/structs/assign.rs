@@ -1,5 +1,6 @@
-use crate::Var;
+use super::var::Var;
 
+#[derive(Clone)]
 pub enum Assign {
     Dec(
         Var, // Type

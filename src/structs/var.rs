@@ -47,6 +47,27 @@ impl Var {
             },
         }
     }
+
+    /// Changes the variable type into a one that fits the best.
+    pub fn best_fit(&mut self) {
+        *self = match self {
+            Var::Z(z) => {
+                if z <= &mut 0 {
+                    Var::N(i64::try_into(*z).unwrap())
+                }
+                else {
+                    Var::Z(*z)
+                }
+            },
+            Var::N(n) => {
+                Var::N(*n)
+            },
+        }
+    }
+
+    // pub fn bruh<T> (num: &T) -> Var {
+    //
+    // }
 }
 
 impl Clone for Var {

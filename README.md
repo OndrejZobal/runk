@@ -1,7 +1,8 @@
-# Ridiculously Useless Numeric Katastrophe - runk
-> Please do not confuse this with Ronald's Universal Number Kruncher
+<img src="logo.gif">
 
-* * *
+# Ridiculously Useless Numeric Katastrophe
+
+> Please do not confuse this with Ronald's Universal Number Kruncher
 
 ## What is runk?
 runk is a standard unix utility that does math on all computers on Earth!
@@ -65,3 +66,7 @@ Z var2: [10 + $($var1 * 9) / $input] # var2: 64
 ```
 
 *for whatever reason GitHub doesn't display proper syntax highlighting for runk I apologise.*
+
+* * *
+
+*Logo by https://cooltext.com/ *
