@@ -5,7 +5,7 @@ use std::io::{self, BufReader, BufRead};
 use colored::Colorize;
 use structs::{program_data};
 
-use clap::Parser;
+//use clap::Parser;
 
 mod runk;
 mod structs;
@@ -14,14 +14,26 @@ mod expressions;
 mod prints;
 
 fn main() {
-    let input_file_name = env::args().nth(1);
+
+    let mut args: Vec<_> = env::args().collect();
+    let mut debug = false;
+
+    for (i, arg) in args.iter().enumerate() {
+        if arg == "--debug" && i != 0 {
+            debug = true;
+            args.remove(i);
+            break;
+        }
+    }
+
+    let input_file_name = args.iter().nth(1);
 
     let input_file_reader: Box<dyn BufRead> = match input_file_name {
         None => Box::new(BufReader::new(io::stdin())),
         Some(ref filename) => Box::new(BufReader::new(File::open(&filename).unwrap()))
     };
 
-    let mut program_data = program_data::ProgramData::new(false);
+    let mut program_data = program_data::ProgramData::new(debug.clone());
 
     runk::run_runk_buffer(input_file_reader,
                  match &input_file_name {
