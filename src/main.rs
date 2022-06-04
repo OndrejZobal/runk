@@ -2,7 +2,6 @@ use std::env;
 use std::fs::File;
 use std::io::{self, BufReader, BufRead};
 
-use colored::Colorize;
 use structs::{program_data};
 
 //use clap::Parser;

@@ -11,7 +11,6 @@ use crate::color_print;
 /// Parses assignment (if it exsits)
 fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> (Option<assign::Assign>, usize) {
     // Parsing assignment
-    let mut assign: Option<assign::Assign> = None;
     let mut exp_start_index: usize = 0;
 
     // Look for the asssignment operator ":"
@@ -70,7 +69,7 @@ fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> (Op
 /// line The tokenized line
 /// data Internal data of the program
 fn execute_asignment(assign: &Option<assign::Assign>,
-                     vale: &var::Var,
+                     value: &var::Var,
                      info: &source_info::SourceInfo,
                      data: &mut program_data::ProgramData) -> Option<usize> {
     // Processing assignment
@@ -91,39 +90,28 @@ fn execute_asignment(assign: &Option<assign::Assign>,
             }
 
             // Copying the acutal number to "num"
-            if !vale.fit_into(&mut num) {
+            if !value.fit_into(&mut num) {
                 runtime_error(&info, format!("Failiure while converting numbers during assignment."));
             }
 
             // New variable is beeing defined. We match agains the type specified
             // in 'line'
-            match num {
-                var::Var::Z(z) => {
-                    // TODO assing simple expression
-                    data.vars.insert((&string[..]).to_string(), num);
-                },
-                var::Var::N(n) => {
-                    // TODO assing simple expression
-                    data.vars.insert((&string[..]).to_string(), num);
-                },
-            };
+            data.vars.insert((&string[..]).to_string(), num);
         },
         assign::Assign::Nondec(string) => {
             if !data.vars.contains_key(&string[..]) {
                 runtime_error(&info, format!("Variable \"{}\" assigned before definition!", string.italic()));
             }
 
-            // Modifing existing variable, need to maintain it's previous type.
-            match data.vars.get(&string[..]).unwrap() {
-                var::Var::Z(z) => {
-                    // TODO assing simple expression
-                    data.vars.insert((&string[..]).to_string(), var::Var::Z(0));
-                },
-                var::Var::N(n) => {
-                    // TODO assing simple expression
-                    data.vars.insert((&string[..]).to_string(), var::Var::N(0));
-                },
-            };
+            let mut old_num: var::Var = data.vars.get(&string[..]).unwrap().clone();
+
+            if !value.fit_into(&mut old_num) {
+                runtime_error(&info, format!("Failiure while converting numbers during assignment."));
+            }
+
+            // New variable is beeing defined. We match agains the type specified
+            // in 'line'
+            data.vars.insert((&string[..]).to_string(), old_num);
         },
     }
 
@@ -305,13 +293,13 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, dat
 
     // looping through every (assignment +) expression.
     while index != lines.len() {
+        info.line_number = lines[index].line_number+1;
         if data.debug {
-            eprint!("{}", format!("RUN {}\t| ", lines[index].line_number).bright_yellow());
+            eprint!("{}", format!("RUN {}\t| ", &info.line_number).bright_yellow());
             eprint!("{} ", lines[index]);
             eprintln!("");
         }
 
-        info.line_number = index;
         let (assign, exp_start_index) = parse_assignment(&lines[index].content[..], &info);
         let (result, exp_end_index, next_index) = resolve_exp(&lines[index].content[exp_start_index..], &info, &data);
 

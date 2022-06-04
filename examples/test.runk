@@ -11,6 +11,7 @@
 
 # Integer
 Z var: -1
+var: 300
 # Natural number
 N var1: 20
 

@@ -6,6 +6,11 @@ pub enum Var {
 }
 
 impl Var {
+    // TODO
+    // pub fn fit_from<T>(num: T) -> Var {
+    //
+    // }
+
     pub fn fit_into(&self, num: &mut Var) -> bool {
         match num {
             Var::Z(z1) => {
