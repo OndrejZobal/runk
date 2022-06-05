@@ -1,4 +1,5 @@
 use std::fmt;
+use std::ops::AddAssign;
 
 pub enum Var {
     N(u64),
@@ -97,6 +98,37 @@ impl fmt::Display for Var {
             Var::Z(z) => {
                 write!(f, "Z({})", z)
             }
+        }
+    }
+}
+
+impl AddAsign for Var {
+    /// This is bad
+    fn try_add(num1: &impl AddAssign, num2: &impl AddAssign)  {
+
+    }
+
+    fn add_assign(&mut self, other: &Var) {
+        match self {
+            // Self is an integer.
+            Var::Z(z) => {
+                match other => {
+                    // Other is an integer
+                    Var::Z(o_z) => {
+                        if try_add(z, o_z) {
+
+                        }
+                    },
+                    // Other is a naturatl number.
+                    Var::N(o_n) => {
+
+                    },
+                }
+            },
+            // Self is a natural number.
+            Var::N(n) => {
+
+            },
         }
     }
 }

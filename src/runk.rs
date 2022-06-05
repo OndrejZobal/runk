@@ -300,6 +300,8 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, dat
             eprintln!("");
         }
 
+        data.add_basic_functions();
+
         let (assign, exp_start_index) = parse_assignment(&lines[index].content[..], &info);
         let (result, exp_end_index, next_index) = resolve_exp(&lines[index].content[exp_start_index..], &info, &data);
 
@@ -318,9 +320,6 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, dat
 
     if data.debug {
         eprintln!("{}", "DONE".green());
-        color_print!("\nVariables:\n", blue italic);
-        for (key, val) in data.vars.iter() {
-            eprintln!("{}: {}", key, val);
-        }
+        data.debug_status();
     }
 }

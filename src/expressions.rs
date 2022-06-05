@@ -8,20 +8,15 @@ use super::structs::{var, assign, program_data, word, source_info};
 
 use crate::prints::*;
 
-enum Op {
-    Add,
-    Sub,
-    Mul,
-    Div,
-}
-
+/// A function that transforms a word in an array into a variable.
+///
+/// At this point we are not sure what type this expression
+/// needs to be, so we just put it in the one that fits best
+/// and if we later down the road need different types we
+/// can just convert it.
 fn resolve_simple_expression(input: &[word::Word], info: &source_info::SourceInfo) -> var::Var {
     let num = (&input[0].string).parse::<u64>();
 
-    // At this point we are not sure what type this expression
-    // needs to be, so we just put it in the one that fits bets
-    // and if we later down the road need different types we
-    // can just convert it.
     if num.is_ok() {
         return var::Var::N(num.unwrap());
     }
@@ -56,6 +51,7 @@ fn resolve_op(word: &word::Word, info: &source_info::SourceInfo) -> Op {
     }
 }
 
+// FIXME
 fn execute_function(operation: &Op, operands: &[var::Var]) -> (var::Var, Option<usize>) {
     let mut sum: i64 = 0;
     for operand in operands {

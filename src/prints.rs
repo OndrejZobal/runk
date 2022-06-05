@@ -6,6 +6,7 @@ use crate::structs::source_info;
 #[macro_export]
 macro_rules! color_print {
     ( $string:expr, $($color:ident) + ) => {
+        use colored::Colorize;
         eprint!("{}", format!($string)$(.$color())+);
         // FIXME io::stderr().flush();
     }
