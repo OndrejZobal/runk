@@ -1,5 +1,7 @@
 <img src="logo.gif">
 
+[![Rust](https://github.com/OndrejZobal/runk/actions/workflows/rust.yml/badge.svg)](https://github.com/OndrejZobal/runk/actions/workflows/rust.yml)
+
 # Ridiculously Useless Numeric Katastrophe
 
 > Please do not confuse this with Ronald's Universal Number Kruncher
@@ -14,8 +16,8 @@ I tought we were missing out so I decided to make it here as well.
 [Evidence of runk existing](https://twitter.com/6thgrade4ever/status/1433519577892327424)
 
 ## Can I use runk to do math on all computers on Earth?
-It's a work in progress, so it doesn't really work yet. Also as you might have 
-guessed from the name I am not as confident in my programming skills as Ronald, 
+It's a work in progress, so it doesn't really work yet. Also as you might have
+guessed from the name I am not as confident in my programming skills as Ronald,
 so it might not be as great.
 
 # Building
@@ -23,7 +25,7 @@ It's Rust project, just run `cargo build` or something.
 
 # Usage
 Give it a path to a `.runk` source file and runk will be happy to run it.
-You can also shove the `.runk` file down the stadnard input 
+You can also shove the `.runk` file down the stadnard input
 and it should also work.
 
 # Syntax
