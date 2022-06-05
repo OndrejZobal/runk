@@ -30,7 +30,17 @@ fn main() {
 
     let input_file_reader: Box<dyn BufRead> = match input_file_name {
         None => Box::new(BufReader::new(io::stdin())),
-        Some(ref filename) => Box::new(BufReader::new(File::open(&filename).unwrap()))
+        Some(ref filename) => {
+            let file = File::open(&filename);
+            match file {
+                Ok(f) => Box::new(BufReader::new(f)),
+                Err(e) => {
+                    color_print!("Error: ", red bold);
+                    eprintln!("cannot read file \"{}\": {}", filename.italic(), e);
+                    std::process::exit(1);
+                }
+            }
+        }
     };
 
     let mut program_data = program_data::ProgramData::new(debug.clone());
