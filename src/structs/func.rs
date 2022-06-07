@@ -1,5 +1,6 @@
 use super::var;
 
+// Operations
 pub mod add;
 pub mod sub;
 pub mod mul;
@@ -7,13 +8,16 @@ pub mod div;
 pub mod out;
 pub mod debug;
 
+// Structs
+pub mod func_return;
+
 /// Struct representing a runk function.
 #[derive(Clone)]
 pub struct Func {
     // Closure
-    func: fn(&Vec<var::Var>) -> var::Var,
+    pub func: fn(&[var::Var]) -> func_return::FuncReturn,
     // args
-    args: ArgSpec,
+    pub args: ArgSpec,
 }
 
 /// Enum for specifiing arguments to a function.

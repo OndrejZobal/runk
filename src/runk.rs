@@ -2,6 +2,7 @@ use std::env;
 use std::fs::File;
 use std::io::{self, BufReader, BufRead};
 use colored::Colorize;
+use num_traits::{ Zero };
 
 use crate::structs::{var, assign, program_data, word, source_info, line};
 use crate::prints::{syntax_error, runtime_error};
@@ -26,11 +27,11 @@ fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> (Op
         syntax_error(&info, "Missing expression!".to_string());
     }
 
-    // This assumes that its cropeed lol
+    // This assumes that its croppeed
 
     // Nondeclarative
     if exp_start_index == 1 {
-        if input[0].string.parse::<f64>().is_ok() {
+        if input[0].string.parse::<num_bigint::BigInt>().is_ok() {
             syntax_error(&info, format!("Variable name \"{}\" is invalid!", input[0].string.italic()))
         }
 
@@ -42,14 +43,14 @@ fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> (Op
 
     // Declarative
     if exp_start_index == 2 {
-        if input[1].string.parse::<f64>().is_ok() {
+        if input[1].string.parse::<num_bigint::BigInt>().is_ok() {
             syntax_error(&info, format!("Variable name \"{}\" is invalid!", input[1].string.italic()))
         }
         return (
             Some(assign::Assign::Dec(
             match &input[0].string[..] {
-                "Z" => var::Var::Z(0),
-                "N" => var::Var::N(0),
+                "Z" => var::Var::z(Zero::zero()).unwrap(),
+                "N" => var::Var::n(Zero::zero()).unwrap(),
                 &_  => {
                     syntax_error(&info, format!("Unknown type \"{}\"", input[0].string.italic()));
                 }
@@ -76,7 +77,7 @@ fn execute_asignment(assign: &Option<assign::Assign>,
     if assign.is_none() {
         if data.debug {
             color_print!("Not Assigned: ", yellow);
-            eprintln!("{}", info.line_number);
+            eprintln!("{}", value);
         }
         return None;
     }
@@ -90,7 +91,7 @@ fn execute_asignment(assign: &Option<assign::Assign>,
             }
 
             // Copying the acutal number to "num"
-            if !value.fit_into(&mut num) {
+            if value.fit_into(&mut num).is_err() {
                 runtime_error(&info, format!("Failiure while converting numbers during assignment."));
             }
 
@@ -105,7 +106,7 @@ fn execute_asignment(assign: &Option<assign::Assign>,
 
             let mut old_num: var::Var = data.vars.get(&string[..]).unwrap().clone();
 
-            if !value.fit_into(&mut old_num) {
+            if value.fit_into(&mut old_num).is_err() {
                 runtime_error(&info, format!("Failiure while converting numbers during assignment."));
             }
 
@@ -118,61 +119,6 @@ fn execute_asignment(assign: &Option<assign::Assign>,
     None
 }
 
-/// Internal function for parsing a single (assignment &) expression.
-/// It returns a `Line` struct that the makes things easier to work with.
-/// Gets called by the run_file function.
-///
-/// ## Arguments
-/// input Vector of tokens as they were found in the input file.
-/// filename Name of the file beeing executed. Used for logging only.
-/// line_number Line number of the beggingin of the expression.
-/// data Internal state of the runk program.
-// fn parse_line<'a>(input: Vec::<word::Word>, file_name: &'a str, line_number: usize) -> line::Line<'a> {
-//
-//     for (i, word) in input.iter().enumerate() {
-//         if i == 0 {
-//             eprint!("{}", format!("RUN {}\t| ", word.line).bright_yellow());
-//         }
-//         eprint!("{} ", word.string);
-//     }
-//     eprintln!("");
-//
-//     // First word can either be:
-//     // A type (Is Z, N or R)
-//     // A variable name (is a string)
-//     // A simple expresion (is a number)
-//     // Other expression (has parethesees)
-//
-//     // Parsing assignment
-//     let mut assign: Option<assign::Assign> = None;
-//     let mut exp_start_index: usize = 0;
-//
-//     // Look for the asssignment operator ":"
-//     for (i, word) in input.iter().enumerate() {
-//         if word.string == ":" {
-//             assign = parse_assignment(&input[..i], &file_name, &line_number);
-//             exp_start_index = i+1;
-//             break;
-//         }
-//     }
-//
-//     // Check if expression is missing.
-//     if input.len() <= exp_start_index {
-//         syntax_error(file_name, &line_number, "Missing expression!".to_string());
-//     }
-//
-//     // Parsing expression
-//     let (num, exp_end_index) = resolve_exp(&input[exp_start_index..], &file_name, &line_number, data);
-//
-//     if exp_start_index + exp_end_index != input.len() {
-//         syntax_error(file_name, &line_number, format!("Unexpected text after expression!"));
-//     }
-//
-//
-//     let line = line::Line { assignment: assign, number: num,
-//                             info: line::source_info::SourceInfo::new(&usize::try_from(line_number).unwrap(), &file_name, &file_name) };
-//     line
-// }
 
 fn is_special_operator(c: &char) -> bool {
     "()[]<>=:!".chars().any(|s| s.eq(c))
@@ -303,18 +249,26 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, dat
         data.add_basic_functions();
 
         let (assign, exp_start_index) = parse_assignment(&lines[index].content[..], &info);
-        let (result, exp_end_index, next_index) = resolve_exp(&lines[index].content[exp_start_index..], &info, &data);
+        let (ret, exp_end_index) = resolve_exp(&lines[index].content[exp_start_index..], &info, &data);
 
-        if exp_start_index + exp_end_index != lines[index].content.len() {
-            syntax_error(&info, format!("Unexpected text after expression!"));
+        match ret.var {
+            Ok(v) => {
+                if exp_start_index + exp_end_index != lines[index].content.len() {
+                    syntax_error(&info, format!("Unexpected text after expression!"));
+                }
+
+                execute_asignment(&assign, &v, &info, data);
+
+                index = match ret.jump_to {
+                    Option::None => index+1,
+                    Option::Some(i) => i
+                };
+            },
+            Err(string) => {
+                runtime_error(&info, string);
+            }
         }
 
-        execute_asignment(&assign, &result, &info, data);
-
-        index = match next_index {
-            Option::None => index+1,
-            Option::Some(i) => i
-        };
 
     }
 

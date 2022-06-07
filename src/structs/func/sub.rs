@@ -1,12 +1,33 @@
 use super::super::var;
+use num_traits::{ Zero };
+use super::func_return;
 
 pub fn get_func() -> super::Func {
     super::Func {
         func: op,
-        args: super::super::func::ArgSpec::Unlimited(vec!(var::Var::Z(0), var::Var::N(0))),
+        args: super::super::func::ArgSpec::Unlimited(
+            vec!(
+                var::Var::z(Zero::zero()).unwrap(),
+                var::Var::n(Zero::zero()).unwrap()
+            )
+        ),
     }
 }
 
-pub fn op(args: &Vec<word::Word>) -> var::Var {
-    var::Var::Z(0)
+/// Sums all variables.
+pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
+    let mut sum: var::Var = var::Var::z(Zero::zero()).unwrap();
+    for (i, arg) in args.iter().enumerate() {
+        if i == 0 {
+            sum = arg.clone();
+        }
+        else {
+            sum -= arg.clone();
+        }
+    }
+
+    func_return::FuncReturn{
+        var: Ok(sum.best_fit()),
+        jump_to: None
+    }
 }

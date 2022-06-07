@@ -3,73 +3,70 @@
 //!
 
 use super::structs::{var, assign, program_data, word, source_info};
+use super::structs::func::{ self, func_return };
 
 //use structs::{var::Var, assign::Assign, program_data::ProgramData, word::Word, line::Line};
 
 use crate::prints::*;
 
-/// A function that transforms a word in an array into a variable.
-///
-/// At this point we are not sure what type this expression
-/// needs to be, so we just put it in the one that fits best
-/// and if we later down the road need different types we
-/// can just convert it.
-fn resolve_simple_expression(input: &[word::Word], info: &source_info::SourceInfo) -> var::Var {
-    let num = (&input[0].string).parse::<u64>();
-
-    if num.is_ok() {
-        return var::Var::N(num.unwrap());
-    }
-
-    let num = (&input[0].string).parse::<i64>();
-    if num.is_ok() {
-        return var::Var::Z(num.unwrap());
-    }
-
-    // Failed to parse as simple expression:
-    syntax_error(&info, format!("Invalid expression \"{}\"!", &input[0].string.italic())
-    );
-}
-
-fn resolve_op(word: &word::Word, info: &source_info::SourceInfo) -> Op {
-    return match &word.string[..] {
-        "+" => {
-            Op::Add
-        },
-        "-" => {
-            Op::Sub
-        },
-        "*" => {
-            Op::Mul
-        },
-        "/" => {
-            Op::Div
-        },
-        _ => {
-            syntax_error(&info, format!("Invalid expression \"{}\"!", &word.string.italic()));
-        }
-    }
-}
-
 // FIXME
-fn execute_function(operation: &Op, operands: &[var::Var]) -> (var::Var, Option<usize>) {
-    let mut sum: i64 = 0;
-    for operand in operands {
-        match operand {
-            var::Var::N(n) => {
-                sum += *n as i64;
-            }
-            var::Var::Z(z) => {
-                sum += z;
-            }
-        }
+fn execute_function(operation: &word::Word,
+                    operands: &[var::Var],
+                    data: &program_data::ProgramData) -> func_return::FuncReturn {
+    match data.funcs.get(&operation.string) {
+        Some(f) => {
+            match &f.args {
+                // Need to ensure that the supplied operands only contains var variants
+                // specified in 'vec'
+                func::ArgSpec::Unlimited(vec) => {
+                    for op in operands {
+                        let mut found = false;
+                        for supported in vec {
+                            if !op.eq_type(supported) {
+                                found = true;
+                            }
+                        }
+                        if !found {
+                            return func_return::FuncReturn::error(format!(
+                                "Unsupported argument type \"{}\" supplied to function \"{}\". (Supported types: {:?})" ,
+                                &op, &operation.string, vec));
+                        }
+                    }
+                },
+                // Need to ensure the order and variants of supplied operands matches
+                // those specified in vec
+                func::ArgSpec::Limited(vec) => {
+                    // Ensure length of supplied (operands) arguments matches that of reqired args (vec).
+                    if operands.len() != vec.len() {
+                        return func_return::FuncReturn::error(format!(
+                            "Function \"{}\"" ,
+                            &operation.string));
+                    }
+                    for i in 0..operands.len() {
+                        if !operands[i].eq_type(&vec[i]) {
+                        return func_return::FuncReturn::error(format!(
+                            "Function \"{}\"" ,
+                            &operation.string));
+                        }
+                    }
+                }
+            };
+            // TODO check if arguments are ok.
+            (f.func)(operands)
+        },
+        None => func_return::FuncReturn {
+            var: Result::Err(format!("Function not found \"{}\"", &operation.string)),
+            jump_to: None,
+        },
     }
-    (var::Var::Z(sum), None)
+
 }
 
-fn resolve_function_expression(input: &[word::Word], info: &source_info::SourceInfo, data: &program_data::ProgramData) -> (var::Var, usize, Option<usize>) {
+fn resolve_function_expression(input: &[word::Word],
+                               info: &source_info::SourceInfo,
+                               data: &program_data::ProgramData) -> (func_return::FuncReturn, usize) {
     let mut _jump_to: Option<usize> = None;
-    let mut operation: Option<Op> = None;
+    let mut operation: Option<word::Word> = None;
     let mut operands: Vec<var::Var> = Vec::new();
     let mut i: usize = 0;
 
@@ -79,41 +76,52 @@ fn resolve_function_expression(input: &[word::Word], info: &source_info::SourceI
                 None => syntax_error(&info, format!("Function name is missing")),
                 // Honestly no sure why it's i+2 and not i+1, but if it's not ther the program doesn't skip ) sometimes...
                 Some(op) => {
-                    let (result, jump_to) = execute_function(&op, &operands);
-                    (result, i+2, jump_to)
+                    let result = execute_function(&op, &operands, &data);
+                    (result, i+2)
                 }
             }
         }
 
         // First operand in a function is the operation.
         if i == 0 {
-            operation = Some(resolve_op(&input[i], &info));
+            operation = Some(input[i].clone());
             i += 1;
             continue;
         }
 
-        let (num, end_index, _jump_to) = resolve_exp(&input[i..], &info, &data);
-        operands.push(num);
+        let (var, end_index) = resolve_exp(&input[i..], &info, &data);
+        if var.var.is_err() {
+            return (var, end_index);
+        }
+
+        operands.push(var.var.unwrap());
         i += end_index;
     }
 
     syntax_error(&info, format!("Expressions ended abruptly!"));
 }
 
-fn resolve_var(input: &[word::Word], info: &source_info::SourceInfo, data: &program_data::ProgramData) -> var::Var {
+fn resolve_var(input: &[word::Word],
+               info: &source_info::SourceInfo,
+               data: &program_data::ProgramData) -> func_return::FuncReturn {
     let string = &input[0].string[1..];
-    return match data.vars.get(string) {
-        None => {
-            runtime_error(&info, format!("Variable \"{}\" accesed while undefined!", string.italic()));
-        }
-        Some(num) => {
-            (*num).clone()
-        }
+    return func_return::FuncReturn {
+        var: match data.vars.get(string) {
+            None => {
+                Err(format!("Variable \"{}\" was not found.", string.italic()))
+            },
+            Some(num) => {
+                Ok((*num).clone())
+            },
+        },
+        jump_to: None,
     };
 }
 
 
-pub fn resolve_exp(input: &[word::Word], info: &source_info::SourceInfo, data: &program_data::ProgramData) -> (var::Var, usize, Option<usize>) {
+pub fn resolve_exp(input: &[word::Word],
+                   info: &source_info::SourceInfo,
+                   data: &program_data::ProgramData) ->  (func_return::FuncReturn, usize){
     let jump_to: Option<usize> = None;
 
     if input.len() < 1 {
@@ -130,9 +138,9 @@ pub fn resolve_exp(input: &[word::Word], info: &source_info::SourceInfo, data: &
 
     // Resolve variable
     if input[0].string.chars().nth(0).unwrap() == '$' {
-        return (resolve_var(&input[..1], &info, data), 1, None);
+        return (resolve_var(&input[..1], &info, data), 1);
     }
 
     // Simple expression
-    return (resolve_simple_expression(&input[..1], &info), 1, None);
+    return (func_return::FuncReturn {var: var::Var::from_str(input[0].string.as_str()), jump_to: None }, 1) ;
 }
