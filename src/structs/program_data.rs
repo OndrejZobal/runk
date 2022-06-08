@@ -5,8 +5,11 @@ use super::func::{self, *};
 
 #[derive(Clone)]
 pub struct ProgramData {
+    /// Stores runk program's variables
     pub vars: HashMap<String, var::Var>,
+    /// Stores runk program's functions. Currently only stores primitive functions.
     pub funcs: HashMap<String, func::Func>,
+    /// Stores lables of a runk program. For the purpouse of jumping to them.
     pub lables: HashMap<String, usize>,
     pub debug: bool,
 }
@@ -27,6 +30,8 @@ impl ProgramData {
         self.funcs.insert(format!("*"),      mul::get_func());
         self.funcs.insert(format!("/"),      div::get_func());
         self.funcs.insert(format!("out"),    out::get_func());
+        self.funcs.insert(format!("jumpnz"), jumpnz::get_func());
+        self.funcs.insert(format!("jump"),   jump::get_func());
         self.funcs.insert(format!("debug"),  debug::get_func());
     }
 

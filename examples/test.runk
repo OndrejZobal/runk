@@ -33,7 +33,7 @@ N compicated_function: (+
    49 59)
 )
 
-(out $integer)
+# (out $integer)
 
 N add_test: (+ 10 1 100)
 
@@ -45,4 +45,23 @@ Z mul_test: (* 2 2 2 2 2)
 N div_test: (/ 2048 2 16 4)
 
 Z bruhhhh: (+ $add_test $sub_test)
-(out $add_test $sub_test)
+
+# =========
+# Fibonacci
+# =========
+Z max: 1597 # Havent implemented comparasons so it needs to be equal to a fib number lol.
+Z n1: 1
+Z n2: 0
+Z helper: 0
+# Need to use this helper variable to force typecasting in jumpnz.
+# Because runk will implicitly cast any positive function output as a natural number.
+# Because it tries to fit the number into the narrowest set possible.
+Z condition: 0
+
+!loop                           # A lable to return to at the beginning of every iteration.
+(out $n2)                       # Prints previous number.
+helper: $n1                     # Saving current number to herlper
+n1: (+ $n1 $n2)                 # Sets current number to: current number + previous number
+n2: $helper                     # Copyies helper into previous number
+condition: (- $max $n2)         # Calculating the condition and saving it to a variable to force typecasting to an integer.
+(jumpnz $condition !loop)       # Jumps if condition is not equal to zero. "(jumpnz (- $n2 $max) !loop)" only works to the first non-negative number (0) and then crashes xd.

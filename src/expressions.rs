@@ -2,7 +2,7 @@
 //! Collection of functions dedicated to resolving expressions.
 //!
 
-use super::structs::{var, assign, program_data, word, source_info};
+use super::structs::{var, program_data, word, source_info};
 use super::structs::func::{ self, func_return };
 
 //use structs::{var::Var, assign::Assign, program_data::ProgramData, word::Word, line::Line};
@@ -39,13 +39,13 @@ fn execute_function(operation: &word::Word,
                     // Ensure length of supplied (operands) arguments matches that of reqired args (vec).
                     if operands.len() != vec.len() {
                         return func_return::FuncReturn::error(format!(
-                            "Function \"{}\"" ,
+                            "Call to function \"{}\" doesn't have the required number of argumets." ,
                             &operation.string));
                     }
                     for i in 0..operands.len() {
                         if !operands[i].eq_type(&vec[i]) {
                         return func_return::FuncReturn::error(format!(
-                            "Function \"{}\"" ,
+                            "Function \"{}\" called with incorrect argument type." ,
                             &operation.string));
                         }
                     }
@@ -102,7 +102,6 @@ fn resolve_function_expression(input: &[word::Word],
 }
 
 fn resolve_var(input: &[word::Word],
-               info: &source_info::SourceInfo,
                data: &program_data::ProgramData) -> func_return::FuncReturn {
     let string = &input[0].string[1..];
     return func_return::FuncReturn {
@@ -122,8 +121,6 @@ fn resolve_var(input: &[word::Word],
 pub fn resolve_exp(input: &[word::Word],
                    info: &source_info::SourceInfo,
                    data: &program_data::ProgramData) ->  (func_return::FuncReturn, usize){
-    let jump_to: Option<usize> = None;
-
     if input.len() < 1 {
         syntax_error(&info, format!("Missing expression!"));
     }
@@ -138,7 +135,7 @@ pub fn resolve_exp(input: &[word::Word],
 
     // Resolve variable
     if input[0].string.chars().nth(0).unwrap() == '$' {
-        return (resolve_var(&input[..1], &info, data), 1);
+        return (resolve_var(&input[..1], data), 1);
     }
 
     // Simple expression

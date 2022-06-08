@@ -1,6 +1,5 @@
-use std::env;
-use std::fs::File;
-use std::io::{self, BufReader, BufRead};
+use std::io::{ BufRead };
+use std::collections;
 use colored::Colorize;
 use num_traits::{ Zero };
 
@@ -232,14 +231,76 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>, info: &source_info::S
 }
 
 
+/// Finds all lables in an array of lines and adds them to hash_map.
+/// Returns Result<Number of lables found, Error message>
+fn load_lables(lines: &[line::Line],
+               hash_map: &mut collections::HashMap<String, usize>) -> Result<usize, String> {
+    let mut counter = 0;
+    for (i, line) in lines.iter().enumerate() {
+        if line.content.len() != 1 {
+            continue;
+        }
+
+        let lable = match get_lable(&line) {
+            Some(s) => s,
+            None  => continue,
+        };
+
+        if hash_map.get(&lable).is_some() {
+            return Result::Err(format!("Redefinition of lable \"{}\".", &lable));
+        }
+
+        hash_map.insert(lable.clone(), i);
+        counter += 1;
+    }
+
+    Result::Ok(counter)
+}
+
+
+fn get_lable(line: &line::Line) -> Option<String> {
+    if line.content.len() != 1 {
+        return None;
+    }
+
+    if line.content[0].string.len() <= 1 {
+        return None;
+    }
+
+    if line.content[0].string.chars().nth(0).unwrap() == '!' {
+        return Some((&line.content[0].string[1..]).to_string());
+    }
+
+    return None;
+}
+
+
 pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, data: &mut program_data::ProgramData) {
     let mut index = 0;
     let mut info = source_info::SourceInfo::new(index, &file_name, &file_name); // TODO add text
     let lines: Vec<line::Line> = parse_file(input_file_reader, &info, &file_name[..]);
 
+    match load_lables(&lines, &mut data.lables) {
+        Ok(n) => {
+            if data.debug {
+                eprintln!("Found {} lables", n);
+            }
+        },
+        Err(e) => {
+            runtime_error(&info, e);
+        }
+    }
+
     // looping through every (assignment +) expression.
     while index != lines.len() {
         info.line_number = lines[index].line_number+1;
+
+        // Skipping lables
+        if get_lable(&lines[index]).is_some() {
+            index += 1;
+            continue;
+        }
+
         if data.debug {
             eprint!("{}", format!("RUN {}\t| ", &info.line_number).bright_yellow());
             eprint!("{} ", lines[index]);
@@ -248,9 +309,12 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, dat
 
         data.add_basic_functions();
 
+        // Splitting assignment and expression
         let (assign, exp_start_index) = parse_assignment(&lines[index].content[..], &info);
+        // Resolves expressions and returns a value;
         let (ret, exp_end_index) = resolve_exp(&lines[index].content[exp_start_index..], &info, &data);
 
+        // Assigns the value from the expression
         match ret.var {
             Ok(v) => {
                 if exp_start_index + exp_end_index != lines[index].content.len() {
@@ -259,17 +323,21 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, dat
 
                 execute_asignment(&assign, &v, &info, data);
 
+                // Executes jump
                 index = match ret.jump_to {
                     Option::None => index+1,
-                    Option::Some(i) => i
+                    Option::Some(s) => {
+                        match data.lables.get(&s) {
+                            None => runtime_error(&info, format!("Attempted to jump to an undefined lable \"{}\"", s)),
+                            Some(i) => *i,
+                        }
+                    },
                 };
             },
             Err(string) => {
                 runtime_error(&info, string);
             }
         }
-
-
     }
 
     if data.debug {

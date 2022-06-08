@@ -6,6 +6,8 @@ pub mod sub;
 pub mod mul;
 pub mod div;
 pub mod out;
+pub mod jump;
+pub mod jumpnz;
 pub mod debug;
 
 // Structs

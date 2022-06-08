@@ -7,11 +7,11 @@
 > Please do not confuse this with Ronald's Universal Number Kruncher
 
 ## What is runk?
-runk is a standard unix utility that does math on all computers on Earth!
+runk is a standard Unix utility that does math on all computers on Earth!
 
 ## How come I never heard of runk?
 A guy named Ronald made runk on a different timeline where runk is used the most.
-I tought we were missing out so I decided to make it here as well.
+I thought we were missing out so I decided to make it here as well.
 
 [Evidence of runk existing](https://twitter.com/6thgrade4ever/status/1433519577892327424)
 
@@ -25,13 +25,45 @@ It's Rust project, just run `cargo build` or something.
 
 # Usage
 Give it a path to a `.runk` source file and runk will be happy to run it.
-You can also shove the `.runk` file down the stadnard input
+You can also shove the `.runk` file down the standard input
 and it should also work.
+
+# What works
+The interpreter is not yet fully implemented, but some things already work. You can have a look at my [test file](examples/test.runk) everything in this file should always work and the interpreter should exit with 0.
+
+My latest breakthrough is *tricking* runk into displaying the Fibonacci sequence!
+
+``` runk
+#!/bin/env runk
+
+# ==============
+# Fibonacci.runk
+# ==============
+
+Z max: 1597 # Havent implemented comparasons so it needs to be equal to a fib number lol.
+Z n1: 1
+Z n2: 0
+Z helper: 0
+# Need to use this helper variable to force typecasting in jumpnz.
+# Because runk will implicitly cast any positive function output as a natural number.
+# Because it tries to fit the number into the narrowest set possible.
+Z condition: 0
+
+!loop                           # A lable to return to at the beginning of every iteration.
+(out $n2)                       # Prints previous number.
+helper: $n1                     # Saving current number to herlper
+n1: (+ $n1 $n2)                 # Sets current number to: current number + previous number
+n2: $helper                     # Copyies helper into previous number
+condition: (- $max $n2)         # Calculating the condition and saving it to a variable to force typecasting to an integer.
+(jumpnz $condition !loop)       # Jumps if condition is not equal to zero. "(jumpnz (- $n2 $max) !loop)" only works to the first non-negative number (0) and then crashes xd.
+```
+
+It still required a couple of runk hacks to get working but it works!
 
 # Syntax
 You can see these [examples](examples/).
 
-Here is how a runk source file could look like when it's fully developed (Although everything will prablbly change during development):
+Here is how a runk source file could look like when it's fully developed (Although everything will probably change during development):
 
 ```runk
 #!/bin/env runk
@@ -41,9 +73,6 @@ Here is how a runk source file could look like when it's fully developed (Althou
 
 # Direct assignment
 Z var0: 2 # var0 is equal to 2
-
-# A jump mark
-!START
 
 # Assignment with Single-op expression
 Z var1: (+ 1 $var0 3) # var1: 6
@@ -58,12 +87,15 @@ Z input: <in Z alias liberal> # reads word from file (no file means stdin)
 # Multi-op expression
 Z var2: [10 + $($var1 * 9) / $input] # var2: 64
 
+# A lable
+!start
+
 <if (>= $var2 0)
     # Command
     <out "The result is $var2!">
 ><else
     var1: (+ $var1 1)
-    <jump START>
+    (jump START)
 >
 ```
 
@@ -71,4 +103,4 @@ Z var2: [10 + $($var1 * 9) / $input] # var2: 64
 
 * * *
 
-*Logo by https://cooltext.com/ *
+*Logo by <https://cooltext.com/>*

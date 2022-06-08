@@ -14,6 +14,10 @@ pub enum Var {
     N(BigInt),
     /// Integer type
     Z(BigInt),
+    /// Text (string) type
+    T(String),
+    /// Lable type (used for jumping)
+    L(String),
 }
 
 // ------------
@@ -49,6 +53,13 @@ impl Var {
 
     /// Creates a variable from
     pub fn from_str(value: &str) -> Result<Var, String> {
+        if value.len() >= 2 {
+            // Lable literals
+            if value.chars().nth(0).unwrap() == '!'{
+                return Ok( Var::L( (&value[1..]).to_string() ) );
+            }
+        }
+
         match value.parse::<BigInt>() {
             Ok(i) => {
                 Ok(Var::new(i))
@@ -106,18 +117,38 @@ impl Var {
                     Var::N(_o_n) => {
                         true
                     },
-                    Var::Z(_o_z) => {
+                    _ => {
                         false
                     },
                 }
             },
             Var::Z(_z) => {
                 match other {
-                    Var::N(_o_n) => {
-                        false
-                    },
                     Var::Z(_o_z) => {
                         true
+                    },
+                    _ => {
+                        false
+                    },
+                }
+            },
+            Var::L(_l) => {
+                match other {
+                    Var::L(_o_l) => {
+                        true
+                    },
+                    _ => {
+                        false
+                    },
+                }
+            },
+            Var::T(_t) => {
+                match other {
+                    Var::T(_o_t) => {
+                        true
+                    },
+                    _ => {
+                        false
                     },
                 }
             },
@@ -138,7 +169,8 @@ impl Var {
         // Getting original value.
         let value: &BigInt = match self {
             Var::N(n) => n,
-            Var::Z(z) => return Result::Ok(self.clone()),
+            Var::Z(_z) => return Result::Ok(self.clone()),
+            _ => return Result::Err(format!("Cannot convert to natural number")),
         };
 
         // Checking conditions.
@@ -154,6 +186,7 @@ impl Var {
         let value: &BigInt = match self {
             Var::N(_n) => return Result::Ok(self.clone()),
             Var::Z(z) => &z,
+            _ => return Result::Err(format!("Cannot convert to natural number")),
         };
 
         // Checking conditions.
@@ -184,6 +217,7 @@ impl Var {
         *other = match other {
             Var::N(_n) => self.get_n()?,
             Var::Z(_z) => self.get_z()?,
+            _ => other.clone(),
         };
 
         Result::Ok(other)
@@ -217,7 +251,13 @@ impl Var {
             },
             Var::Z(z) => {
                 format!("{}", z)
-            }
+            },
+            Var::T(n) => {
+                format!("{}", n)
+            },
+            Var::L(z) => {
+                format!("!{}", z)
+            },
         }
     }
 }
@@ -236,7 +276,13 @@ impl fmt::Display for Var {
             },
             Var::Z(z) => {
                 write!(f, "Z({})", z)
-            }
+            },
+            Var::T(s) => {
+                write!(f, "T({})", s)
+            },
+            Var::L(s) => {
+                write!(f, "L({})", s)
+            },
         }
     }
 }
@@ -250,7 +296,13 @@ impl fmt::Debug for Var {
             },
             Var::Z(z) => {
                 write!(f, "Z({})", z)
-            }
+            },
+            Var::T(s) => {
+                write!(f, "T({})", s)
+            },
+            Var::L(s) => {
+                write!(f, "L({})", s)
+            },
         }
     }
 }
@@ -270,6 +322,7 @@ macro_rules! ops_generate {
                             Var::Z(o_z) => {
                                 Var::new(n.clone().$fn1(o_z))
                             },
+                            _ => panic!("Incompatible variants."),
                         }
                     },
                     Var::Z(z) => {
@@ -280,8 +333,10 @@ macro_rules! ops_generate {
                             Var::Z(o_z) => {
                                 Var::new(z.clone().$fn1(o_z))
                             },
+                            _ => panic!("Incompatible variants."),
                         }
                     },
+                    _ => panic!("Incompatible variants."),
                 };
             }
         }

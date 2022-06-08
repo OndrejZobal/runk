@@ -14,7 +14,7 @@ pub fn get_func() -> super::Func {
     }
 }
 
-pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
+pub fn op(_args: &[var::Var]) -> func_return::FuncReturn {
     func_return::FuncReturn{
         var: Ok(var::Var::create_numeric_var(None)),
         jump_to: None

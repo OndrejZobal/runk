@@ -1,5 +1,5 @@
 use super::super::var;
-use num_traits::{ Zero, One };
+use num_traits::{ Zero };
 use super::func_return;
 
 pub fn get_func() -> super::Func {
