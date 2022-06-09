@@ -1,11 +1,13 @@
 use super::super::var;
 use num_traits::{ Zero };
-use super::func_return;
+use super::super::func_return;
+use super::super::Func;
+use super::super::super::func;
 
-pub fn get_func() -> super::Func {
-    super::Func {
+pub fn get_func() -> Func {
+    Func {
         func: op,
-        args: super::super::func::ArgSpec::Unlimited(
+        args: func::ArgSpec::Unlimited(
             vec!(
                 var::Var::z(Zero::zero()).unwrap(),
                 var::Var::n(Zero::zero()).unwrap()
@@ -17,11 +19,8 @@ pub fn get_func() -> super::Func {
 /// Sums all variables.
 pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
     let mut sum: var::Var = var::Var::z(Zero::zero()).unwrap();
-    for (i, arg) in args.iter().enumerate() {
-        if i == 0 {
-            sum = var::Var::n(num_bigint::ToBigInt::to_bigint(&1).unwrap()).unwrap();
-        }
-        sum *= arg.clone();
+    for arg in args {
+        sum += arg.clone();
     }
 
     func_return::FuncReturn{

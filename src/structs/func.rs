@@ -1,14 +1,6 @@
 use super::var;
 
-// Operations
-pub mod add;
-pub mod sub;
-pub mod mul;
-pub mod div;
-pub mod out;
-pub mod jump;
-pub mod jumpnz;
-pub mod debug;
+pub mod primitives;
 
 // Structs
 pub mod func_return;

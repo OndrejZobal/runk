@@ -50,6 +50,8 @@ fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> (Op
             match &input[0].string[..] {
                 "Z" => var::Var::z(Zero::zero()).unwrap(),
                 "N" => var::Var::n(Zero::zero()).unwrap(),
+                "T" => var::Var::t(format!("")).unwrap(),
+                "L" => var::Var::l(format!("")).unwrap(),
                 &_  => {
                     syntax_error(&info, format!("Unknown type \"{}\"", input[0].string.italic()));
                 }
@@ -140,13 +142,14 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>, info: &source_info::S
     let mut line = line::Line::new(&file_name, usize::MAX);
     let mut word: Option<word::Word> = None;
     let mut depth: u64 = 0;
+    let mut in_string = false;
 
     macro_rules! push_word {
         () => {
             match &mut word {
                 None => {},
                 Some(w) => {
-                    if w.string.len() != 0 {
+                    if w.string.len() != 0 && !in_string {
                         line.content.push(w.clone());
                         word = None;
                     }
@@ -163,7 +166,10 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>, info: &source_info::S
                     push_word!();
                     break;
                 }
-                else if c.is_whitespace() {
+                else if c == '"' {
+                    in_string = !in_string;
+                }
+                else if c.is_whitespace() && !in_string {
                     push_word!();
                     continue;
                 }
@@ -191,7 +197,7 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>, info: &source_info::S
             }
 
             if !escape_char {
-                if c == '(' || c == '[' || c == '<' {
+                if c == '(' {
                     if depth == u64::MAX {
                         let mut correct_info = (*info).clone();
                         correct_info.line_number = i;
@@ -200,7 +206,7 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>, info: &source_info::S
                     depth += 1;
                     push_word!();
                 }
-                else if c == ')' || c == ']' || c == '>' {
+                else if c == ')' {
                     if depth == 0 {
                         let mut correct_info = (*info).clone();
                         correct_info.line_number = i;
@@ -307,7 +313,7 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, dat
             eprintln!("");
         }
 
-        data.add_basic_functions();
+        data.add_primitive_functions();
 
         // Splitting assignment and expression
         let (assign, exp_start_index) = parse_assignment(&lines[index].content[..], &info);

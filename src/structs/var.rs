@@ -8,7 +8,7 @@ use colored::Colorize;
 
 /// Variants of this enum represent different variable types supported
 /// in runk.
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, PartialOrd)]
 pub enum Var {
     /// Natural number type
     N(BigInt),
@@ -43,6 +43,14 @@ impl Var {
         Ok(Var::N(value))
     }
 
+    pub fn t(value: String) -> Result<Var, String> {
+        Ok(Var::T(value))
+    }
+
+    pub fn l(value: String) -> Result<Var, String> {
+        Ok(Var::L(value))
+    }
+
     /// Creates a numeric variable (can be of any variant) from value.
     pub fn create_numeric_var(value: Option<num_bigint::BigInt>) -> Self {
         Var::Z(match value {
@@ -51,15 +59,20 @@ impl Var {
         }).best_fit()
     }
 
-    /// Creates a variable from
+    /// Creates a variable from a runk literal supplied as string slice.
     pub fn from_str(value: &str) -> Result<Var, String> {
         if value.len() >= 2 {
             // Lable literals
             if value.chars().nth(0).unwrap() == '!'{
                 return Ok( Var::L( (&value[1..]).to_string() ) );
             }
+            // Text literal
+            else if value.chars().nth(0).unwrap() == '"'  && value.chars().nth(value.len()-1).unwrap() == '"' {
+                return Ok( Var::T( (&value[1..value.len()-1]).to_string() ) );
+            }
         }
 
+        // Numeric literals
         match value.parse::<BigInt>() {
             Ok(i) => {
                 Ok(Var::new(i))
@@ -198,6 +211,33 @@ impl Var {
         Result::Ok(Var::N(value.clone()))
     }
 
+
+    /// Returns a variable containing self's value as variant T (text).
+    pub fn get_t(&self) -> Result<Self, String> {
+        match self {
+            Var::T(_t) => {
+                Ok(self.clone())
+            },
+            _ => {
+                Err(format!("Cannot convert variable \"{}\" to text.", &self))
+            },
+        }
+    }
+
+
+    /// Returns a variable containing self's value as variant T (text).
+    pub fn get_l(&self) -> Result<Self, String> {
+        match self {
+            Var::L(_l) => {
+                Ok(self.clone())
+            },
+            _ => {
+                Err(format!("Cannot convert variable \"{}\" to a lable.", &self))
+            },
+        }
+    }
+
+
     /// Converts any var (if possible) to the N variant.
     pub fn to_n(&mut self) -> Result<Self, String> {
         let var = self.get_n()?;
@@ -217,6 +257,8 @@ impl Var {
         *other = match other {
             Var::N(_n) => self.get_n()?,
             Var::Z(_z) => self.get_z()?,
+            Var::T(_t) => self.get_t()?,
+            Var::L(_l) => self.get_l()?,
             _ => other.clone(),
         };
 

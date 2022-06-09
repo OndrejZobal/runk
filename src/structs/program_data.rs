@@ -24,17 +24,6 @@ impl ProgramData {
         }
     }
 
-    pub fn add_basic_functions(&mut self) {
-        self.funcs.insert(format!("+"),      add::get_func());
-        self.funcs.insert(format!("-"),      sub::get_func());
-        self.funcs.insert(format!("*"),      mul::get_func());
-        self.funcs.insert(format!("/"),      div::get_func());
-        self.funcs.insert(format!("out"),    out::get_func());
-        self.funcs.insert(format!("jumpnz"), jumpnz::get_func());
-        self.funcs.insert(format!("jump"),   jump::get_func());
-        self.funcs.insert(format!("debug"),  debug::get_func());
-    }
-
     pub fn debug_vars_print(&self) {
         crate::color_print!("\nVariables:\n", blue italic);
         for (key, val) in self.vars.iter() {

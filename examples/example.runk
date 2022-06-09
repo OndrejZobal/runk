@@ -13,7 +13,7 @@
 # ----------------------------------------
 
 # Simple expression
-2 # Because expression is not assigned, it falls through as is displayed as debug output on stderr.
+2 # Because expression is not assigned, it falls through and is displayed as debug output on stderr.
 
 # Direct assignment
 Z var0: 2 # var0 is equal to 2

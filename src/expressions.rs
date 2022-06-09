@@ -11,7 +11,7 @@ use crate::prints::*;
 
 // FIXME
 fn execute_function(operation: &word::Word,
-                    operands: &[var::Var],
+                    operands: &mut Vec<var::Var>,
                     data: &program_data::ProgramData) -> func_return::FuncReturn {
     match data.funcs.get(&operation.string) {
         Some(f) => {
@@ -19,7 +19,7 @@ fn execute_function(operation: &word::Word,
                 // Need to ensure that the supplied operands only contains var variants
                 // specified in 'vec'
                 func::ArgSpec::Unlimited(vec) => {
-                    for op in operands {
+                    for op in &mut *operands {
                         let mut found = false;
                         for supported in vec {
                             if !op.eq_type(supported) {
@@ -43,10 +43,21 @@ fn execute_function(operation: &word::Word,
                             &operation.string));
                     }
                     for i in 0..operands.len() {
-                        if !operands[i].eq_type(&vec[i]) {
-                        return func_return::FuncReturn::error(format!(
-                            "Function \"{}\" called with incorrect argument type." ,
-                            &operation.string));
+                        // if !operands[i].eq_type(&vec[i]) {
+                        // return func_return::FuncReturn::error(format!(
+                        //     "Function \"{}\" called with incorrect argument type." ,
+                        //     &operation.string));
+                        // }
+                        operands[i] = match operands[i].fit_into(&mut vec[i].clone()) {
+                            Ok(var) => {
+                                var.clone()
+                            },
+                            Err(e) => {
+                                return func_return::FuncReturn {
+                                    var: Result::Err(e),
+                                    jump_to: None,
+                                };
+                            },
                         }
                     }
                 }
@@ -76,7 +87,7 @@ fn resolve_function_expression(input: &[word::Word],
                 None => syntax_error(&info, format!("Function name is missing")),
                 // Honestly no sure why it's i+2 and not i+1, but if it's not ther the program doesn't skip ) sometimes...
                 Some(op) => {
-                    let result = execute_function(&op, &operands, &data);
+                    let result = execute_function(&op, &mut operands, &data);
                     (result, i+2)
                 }
             }

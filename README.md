@@ -36,29 +36,25 @@ My latest breakthrough is *tricking* runk into displaying the Fibonacci sequence
 ``` runk
 #!/bin/env runk
 
-# ==============
-# Fibonacci.runk
-# ==============
-
-Z max: 1597 # Havent implemented comparasons so it needs to be equal to a fib number lol.
+# =========
+# Fibonacci
+# =========
+Z max: 1000
 Z n1: 1
 Z n2: 0
 Z helper: 0
-# Need to use this helper variable to force typecasting in jumpnz.
-# Because runk will implicitly cast any positive function output as a natural number.
-# Because it tries to fit the number into the narrowest set possible.
-Z condition: 0
+N order: 1
 
-!loop                           # A lable to return to at the beginning of every iteration.
-(out $n2)                       # Prints previous number.
-helper: $n1                     # Saving current number to herlper
-n1: (+ $n1 $n2)                 # Sets current number to: current number + previous number
-n2: $helper                     # Copyies helper into previous number
-condition: (- $max $n2)         # Calculating the condition and saving it to a variable to force typecasting to an integer.
-(jumpnz $condition !loop)       # Jumps if condition is not equal to zero. "(jumpnz (- $n2 $max) !loop)" only works to the first non-negative number (0) and then crashes xd.
+!loop                                               # A lable to return to at the beginning of every iteration.
+(out $order "th Fibonacci number is" $n2 "!")       # Prints previous number.
+helper: $n1                                         # Saving current number to herlper
+n1: (+ $n1 $n2)                                     # Sets current number to: current number + previous number
+n2: $helper                                         # Copyies helper into previous number
+order: (+ $order 1)                                 # Increment order.
+(jumpnz (< $n2 $max) $lable)                        # Jumps if condition is not equal to zero. 
+
+(out "And that's it!")
 ```
-
-It still required a couple of runk hacks to get working but it works!
 
 # Syntax
 You can see these [examples](examples/).
@@ -69,7 +65,7 @@ Here is how a runk source file could look like when it's fully developed (Althou
 #!/bin/env runk
 
 # Simple expression
-2 # Because expression is not assigned, it falls through as is displayed as debug output on stderr.
+2 # Because expression is not assigned, it falls through and is displayed as debug output on stderr.
 
 # Direct assignment
 Z var0: 2 # var0 is equal to 2
