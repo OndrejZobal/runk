@@ -8,7 +8,7 @@ use colored::Colorize;
 
 /// Variants of this enum represent different variable types supported
 /// in runk.
-#[derive(PartialEq, Clone, PartialOrd)]
+#[derive(Clone, PartialOrd)]
 pub enum Var {
     /// Natural number type
     N(BigInt),
@@ -309,6 +309,32 @@ impl Var {
 // TRAIT IMPLEMENTATION
 // ====================
 
+impl PartialEq for Var {
+    fn eq(&self, other: &Self) -> bool {
+        match self {
+            Var::Z(num_s) | Var::N(num_s) => {
+                match other {
+                    Var::Z(num_o) | Var::N(num_o) => num_s == num_o,
+                    _ => false,
+                }
+            },
+            Var::T(text_s) => {
+                match other {
+                    Var::T(text_o) => *text_s == *text_o,
+                    _ => false,
+                }
+            },
+            Var::L(lable_s) => {
+                match other {
+                    Var::L(lable_o) => *lable_s == *lable_o,
+                    _ => false,
+                }
+            },
+
+            _ => false,
+        }
+    }
+}
 
 impl fmt::Display for Var {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

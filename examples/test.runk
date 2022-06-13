@@ -54,7 +54,7 @@ Z bruhhhh: (+ $add_test $sub_test)
 # =========
 # Fibonacci
 # =========
-Z max: 1000
+Z max: 100
 Z n1: 1
 Z n2: 0
 Z helper: 0
@@ -66,6 +66,6 @@ helper: $n1                                         # Saving current number to h
 n1: (+ $n1 $n2)                                     # Sets current number to: current number + previous number
 n2: $helper                                         # Copyies helper into previous number
 order: (+ $order 1)                                 # Increment order.
-(jumpnz (< $n2 $max) $lable)                        # Jumps if condition is not equal to zero. 
+(jumpnz (<= $order $max) $lable)                        # Jumps if condition is not equal to zero. 
 
 (out "And that's it!")

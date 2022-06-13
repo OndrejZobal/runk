@@ -20,7 +20,7 @@ pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
     for (i, arg) in args.iter().enumerate() {
         print!("{}", arg.plain_string());
         if i != args.len()-1 {
-            print!(" ");
+            //print!(" ");
         }
     }
     println!("");

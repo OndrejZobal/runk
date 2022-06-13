@@ -92,8 +92,8 @@ fn execute_asignment(assign: &Option<assign::Assign>,
             }
 
             // Copying the acutal number to "num"
-            if value.fit_into(&mut num).is_err() {
-                runtime_error(&info, format!("Failiure while converting numbers during assignment."));
+            if let Result::Err(e) = value.fit_into(&mut num) {
+                runtime_error(&info, e);
             }
 
             // New variable is beeing defined. We match agains the type specified
@@ -122,7 +122,7 @@ fn execute_asignment(assign: &Option<assign::Assign>,
 
 
 fn is_special_operator(c: &char) -> bool {
-    "()[]<>=:!".chars().any(|s| s.eq(c))
+    "():".chars().any(|s| s.eq(c))
 }
 
 

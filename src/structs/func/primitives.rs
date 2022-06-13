@@ -6,8 +6,11 @@ pub mod mul;
 pub mod div;
 pub mod out;
 pub mod jump;
+pub mod equal;
 pub mod jumpnz;
 pub mod lesser;
+pub mod r#in;
+pub mod num;
 pub mod greater;
 pub mod lesser_equal;
 pub mod greater_equal;
@@ -20,9 +23,12 @@ impl super::super::program_data::ProgramData {
         self.funcs.insert(format!("/"),      div::get_func());
         self.funcs.insert(format!("<"),      lesser::get_func());
         self.funcs.insert(format!(">"),      greater::get_func());
+        self.funcs.insert(format!("="),      equal::get_func());
         self.funcs.insert(format!("<="),     lesser_equal::get_func());
         self.funcs.insert(format!(">="),     greater_equal::get_func());
+        self.funcs.insert(format!("in"),     r#in::get_func());
         self.funcs.insert(format!("out"),    out::get_func());
+        self.funcs.insert(format!("num"),    num::get_func());
         self.funcs.insert(format!("jump"),   jump::get_func());
         self.funcs.insert(format!("jumpnz"), jumpnz::get_func());
     }
