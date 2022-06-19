@@ -87,8 +87,11 @@ fn execute_asignment(assign: &Option<assign::Assign>,
     match bruh {
         assign::Assign::Dec(mut num, ref string) => {
             if data.vars.contains_key(&string[..]) {
-                runtime_error(&info, format!("Redefinition of variable \"{}\"!", string.italic())
-                );
+                // Runk allows "redefinition" of a variable as long as the type is the same.
+                let old = data.vars.get(&string[..]).unwrap();
+                if !num.eq_type(&old) {
+                    runtime_error(&info, format!("Redefinition of variable \"{}\"!", string.italic()));
+                }
             }
 
             // Copying the acutal number to "num"
