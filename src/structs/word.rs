@@ -1,7 +1,8 @@
 use std::fmt;
+use crate::parser::rtoken;
 
 pub struct Word {
-    pub string: String,
+    pub string: rtoken::Rtoken,
     pub column: u64,
     pub line: u64,
 }

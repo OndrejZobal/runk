@@ -1,11 +1,12 @@
-use std::io::{ BufRead };
 use std::collections;
 use colored::Colorize;
 use num_traits::{ Zero };
+use std::io::{ BufRead };
 
 use crate::structs::{var, assign, program_data, word, source_info, line};
 use crate::prints::{syntax_error, runtime_error};
 use crate::expressions::resolve_exp;
+use crate::parser;
 use crate::color_print;
 
 /// Parses assignment (if it exsits)
@@ -129,117 +130,6 @@ fn is_special_operator(c: &char) -> bool {
 }
 
 
-/// Executes runk code in given buffer. This is the main way of executing runk code
-///
-/// ## Description
-/// This function mainly collects individual (assignment &) expression, separates
-/// individual tokens and puts them into a vec and calls other functions for further processing one by one.
-///
-/// ## Arguments
-/// input_file_reader input buffer containing the runk code that will get executed.
-/// file_name Name of the original file that is beeing executed. It is only used for logging purpouses.
-/// data Stores internal state of the runk program like Variables etc...
-/// TODO Consider returining a result.
-pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>, info: &source_info::SourceInfo, file_name: &'a str) -> Vec::<line::Line<'a>> {
-    let mut lines = Vec::<line::Line>::new();
-    let mut line = line::Line::new(&file_name, usize::MAX);
-    let mut word: Option<word::Word> = None;
-    let mut depth: u64 = 0;
-    let mut in_string = false;
-
-    macro_rules! push_word {
-        () => {
-            match &mut word {
-                None => {},
-                Some(w) => {
-                    if w.string.len() != 0 && !in_string {
-                        line.content.push(w.clone());
-                        word = None;
-                    }
-                },
-            }
-        }
-    }
-
-    for (i, _line) in input_file_reader.lines().enumerate() {
-        let mut escape_char = false;
-        for (j, c) in _line.unwrap().chars().enumerate() {
-            if !escape_char {
-                if c == '#' {
-                    push_word!();
-                    break;
-                }
-                else if c == '"' {
-                    in_string = !in_string;
-                }
-                else if c.is_whitespace() && !in_string {
-                    push_word!();
-                    continue;
-                }
-                else if c == '\\' {
-                    escape_char = true;
-                    continue;
-                }
-                else if is_special_operator(&c) {
-                    push_word!();
-                }
-            }
-
-            // Pushing char
-            match word {
-                None => {
-                    word = Some(word::Word {
-                        string: c.to_string(),
-                        column: u64::try_from(j+1).unwrap(),
-                        line: u64::try_from(i+1).unwrap()}
-                    );
-                },
-                Some(ref mut w) => {
-                    w.string.push(c);
-                },
-            }
-
-            if !escape_char {
-                if c == '(' {
-                    if depth == u64::MAX {
-                        let mut correct_info = (*info).clone();
-                        correct_info.line_number = i;
-                        syntax_error(&correct_info, format!("Too much nesting!"))
-                    }
-                    depth += 1;
-                    push_word!();
-                }
-                else if c == ')' {
-                    if depth == 0 {
-                        let mut correct_info = (*info).clone();
-                        correct_info.line_number = i;
-                        syntax_error(&correct_info, format!("Expression contains more closing than opening brackets!"))
-                    }
-
-                    depth -= 1;
-                    push_word!();
-                }
-            }
-            else {
-                escape_char = false;
-                continue;
-            }
-        }
-        push_word!();
-        if depth == 0 {
-            if line.content.len() != 0 {
-                line.line_number = i;
-                lines.push(line);
-                //lines.push(parse_line(line, &file_name, i+1));
-                //execute_line(parsed_line, data);
-                line = line::Line::new(&file_name, usize::MAX);
-            }
-        }
-    }
-    return lines;
-}
-
-
 /// Finds all lables in an array of lines and adds them to hash_map.
 /// Returns Result<Number of lables found, Error message>
 fn load_lables(lines: &[line::Line],
@@ -287,7 +177,10 @@ fn get_lable(line: &line::Line) -> Option<String> {
 pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, data: &mut program_data::ProgramData) {
     let mut index = 0;
     let mut info = source_info::SourceInfo::new(index, &file_name, &file_name); // TODO add text
-    let lines: Vec<line::Line> = parse_file(input_file_reader, &info, &file_name[..]);
+    let lines: Vec<line::Line> = match parser::parse_file(input_file_reader, &info, &file_name[..]) {
+        Err(e) => syntax_error(&info, e),
+        Ok(l) => l,
+    };
 
     match load_lables(&lines, &mut data.lables) {
         Ok(n) => {

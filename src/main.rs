@@ -7,6 +7,7 @@ use structs::{program_data};
 //use clap::Parser;
 
 mod runk;
+mod parser;
 mod structs;
 mod expressions;
 #[macro_use]
