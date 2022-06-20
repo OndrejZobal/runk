@@ -1,9 +1,11 @@
 use std::fmt;
 use std::ops::{ Add, AddAssign, Sub, SubAssign, Mul, MulAssign, Div, DivAssign };
 use num_bigint::{ BigInt, ToBigInt };
-use num_traits::{ Zero };
+use num_traits::Zero;
 use std::result::Result;
 use colored::Colorize;
+use super::word;
+use crate::parser::rtoken;
 
 
 /// Variants of this enum represent different variable types supported
@@ -59,27 +61,52 @@ impl Var {
         }).best_fit()
     }
 
-    /// Creates a variable from a runk literal supplied as string slice.
-    pub fn from_str(value: &str) -> Result<Var, String> {
-        if value.len() >= 2 {
-            // Lable literals
-            if value.chars().nth(0).unwrap() == '!'{
-                return Ok( Var::L( (&value[1..]).to_string() ) );
-            }
-            // Text literal
-            else if value.chars().nth(0).unwrap() == '"'  && value.chars().nth(value.len()-1).unwrap() == '"' {
-                return Ok( Var::T( (&value[1..value.len()-1]).to_string() ) );
-            }
+    /// Creates a text var from a text token:
+    pub fn text_from_word(word: &word::Word) -> Result<Var, String> {
+        if let rtoken::Rtoken::TextLiteral(value) = &word.rtoken {
+            return Ok(Var::T(value.to_string()));
         }
+        return Err(format!("\"{}\" is not a string literal.", word.original));
+    }
 
-        // Numeric literals
-        match value.parse::<BigInt>() {
+    /// Creates a numeric variable from string.
+    pub fn num_from_str(string: &str) -> Result<Var, String> {
+        return match string.parse::<BigInt>() {
             Ok(i) => {
                 Ok(Var::new(i))
             },
             Err(_e) => {
-                Err(format!("Cannot convert \"{}\" to a number.", value.italic()))
+                Err(format!("Cannot convert \"{}\" to a number.", string.italic()))
             },
+        }
+    }
+
+    /// Creates a numeric var from a text token:
+    pub fn num_from_word(word: &word::Word) -> Result<Var, String> {
+        if let rtoken::Rtoken::NumLiteral(value) = &word.rtoken {
+            return Self::num_from_str(&value[..]);
+        }
+        return Err(format!("\"{}\" is not a valid.", word.original));
+    }
+
+    // Creates a lable var from a text token:
+    pub fn lable_from_word(word: &word::Word) -> Result<Var, String> {
+        if let rtoken::Rtoken::LableLiteral(value) = &word.rtoken {
+            if value.len() < 1 {
+                return Err(format!("Lable literal is too short."));
+            }
+            return Ok(Var::L(value.to_string()));
+        }
+        return Err(format!("\"{}\" not a lable literal.", word.original));
+    }
+
+    /// Creates a variable from a runk token.
+    pub fn from_word(word: &word::Word) -> Result<Var, String> {
+        return match &word.rtoken {
+            rtoken::Rtoken::TextLiteral(string) => Self::text_from_word(&word),
+            rtoken::Rtoken::LableLiteral(string) => Self::lable_from_word(&word),
+            rtoken::Rtoken::NumLiteral(string) => Self::num_from_word(&word),
+            _ => Err(format!("\"{}\" is not a literal of any type.", word.original)),
         }
     }
 

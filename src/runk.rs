@@ -1,21 +1,22 @@
-use std::io::{ BufRead };
 use std::collections;
 use colored::Colorize;
 use num_traits::{ Zero };
+use std::io::{ BufRead };
 
-use crate::structs::{var, assign, program_data, word, source_info, line};
+use crate::structs::{var, assign, program_data, word, source_info, line, optresult};
 use crate::prints::{syntax_error, runtime_error};
 use crate::expressions::resolve_exp;
+use crate::parser::{ self, rtoken };
 use crate::color_print;
 
 /// Parses assignment (if it exsits)
-fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> (Option<assign::Assign>, usize) {
+fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> Result<(Option<assign::Assign>, usize), String> {
     // Parsing assignment
     let mut exp_start_index: usize = 0;
 
     // Look for the asssignment operator ":"
     for (i, word) in input.iter().enumerate() {
-        if word.string == ":" {
+        if word.rtoken == rtoken::Rtoken::Assign {
             exp_start_index = i;
             break;
         }
@@ -26,43 +27,26 @@ fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> (Op
         syntax_error(&info, "Missing expression!".to_string());
     }
 
-    // This assumes that its croppeed
-
     // Nondeclarative
     if exp_start_index == 1 {
-        if input[0].string.parse::<num_bigint::BigInt>().is_ok() {
-            syntax_error(&info, format!("Variable name \"{}\" is invalid!", input[0].string.italic()))
+        if let rtoken::Rtoken::Plain(name) = &input[0].rtoken {
+            return Ok((Some(assign::Assign::Nondec(name.to_string())), exp_start_index+1));
         }
-
-        return (
-            Some(assign::Assign::Nondec(input[0].string.clone())),
-            exp_start_index+1
-        );
+        return Err(format!("Variable name \"{}\" is invalid!", input[0].original.italic()));
     }
 
     // Declarative
     if exp_start_index == 2 {
-        if input[1].string.parse::<num_bigint::BigInt>().is_ok() {
-            syntax_error(&info, format!("Variable name \"{}\" is invalid!", input[1].string.italic()))
+        if let rtoken::Rtoken::DataType(dtype) = &input[0].rtoken{
+            if let rtoken::Rtoken::Plain(name) = &input[1].rtoken {
+                return Ok((Some(assign::Assign::Dec(dtype.clone(), name.to_string())), exp_start_index+1));
+            }
+            return Err(format!("Variable name \"{}\" is invalid!", input[1].original.italic()));
         }
-        return (
-            Some(assign::Assign::Dec(
-            match &input[0].string[..] {
-                "Z" => var::Var::z(Zero::zero()).unwrap(),
-                "N" => var::Var::n(Zero::zero()).unwrap(),
-                "T" => var::Var::t(format!("")).unwrap(),
-                "L" => var::Var::l(format!("")).unwrap(),
-                &_  => {
-                    syntax_error(&info, format!("Unknown type \"{}\"", input[0].string.italic()));
-                }
-            },
-            input[1].string.clone()
-            )),
-            exp_start_index+1
-        );
+        return Err(format!("Variable type \"{}\" is invalid!", input[0].original.italic()));
     }
 
-    return (None, exp_start_index);
+    return Ok((None, exp_start_index));
 }
 
 /// Executes the tokenized line and assignment
@@ -129,117 +113,6 @@ fn is_special_operator(c: &char) -> bool {
 }
 
 
-/// Executes runk code in given buffer. This is the main way of executing runk code
-///
-/// ## Description
-/// This function mainly collects individual (assignment &) expression, separates
-/// individual tokens and puts them into a vec and calls other functions for further processing one by one.
-///
-/// ## Arguments
-/// input_file_reader input buffer containing the runk code that will get executed.
-/// file_name Name of the original file that is beeing executed. It is only used for logging purpouses.
-/// data Stores internal state of the runk program like Variables etc...
-/// TODO Consider returining a result.
-pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>, info: &source_info::SourceInfo, file_name: &'a str) -> Vec::<line::Line<'a>> {
-    let mut lines = Vec::<line::Line>::new();
-    let mut line = line::Line::new(&file_name, usize::MAX);
-    let mut word: Option<word::Word> = None;
-    let mut depth: u64 = 0;
-    let mut in_string = false;
-
-    macro_rules! push_word {
-        () => {
-            match &mut word {
-                None => {},
-                Some(w) => {
-                    if w.string.len() != 0 && !in_string {
-                        line.content.push(w.clone());
-                        word = None;
-                    }
-                },
-            }
-        }
-    }
-
-    for (i, _line) in input_file_reader.lines().enumerate() {
-        let mut escape_char = false;
-        for (j, c) in _line.unwrap().chars().enumerate() {
-            if !escape_char {
-                if c == '#' {
-                    push_word!();
-                    break;
-                }
-                else if c == '"' {
-                    in_string = !in_string;
-                }
-                else if c.is_whitespace() && !in_string {
-                    push_word!();
-                    continue;
-                }
-                else if c == '\\' {
-                    escape_char = true;
-                    continue;
-                }
-                else if is_special_operator(&c) {
-                    push_word!();
-                }
-            }
-
-            // Pushing char
-            match word {
-                None => {
-                    word = Some(word::Word {
-                        string: c.to_string(),
-                        column: u64::try_from(j+1).unwrap(),
-                        line: u64::try_from(i+1).unwrap()}
-                    );
-                },
-                Some(ref mut w) => {
-                    w.string.push(c);
-                },
-            }
-
-            if !escape_char {
-                if c == '(' {
-                    if depth == u64::MAX {
-                        let mut correct_info = (*info).clone();
-                        correct_info.line_number = i;
-                        syntax_error(&correct_info, format!("Too much nesting!"))
-                    }
-                    depth += 1;
-                    push_word!();
-                }
-                else if c == ')' {
-                    if depth == 0 {
-                        let mut correct_info = (*info).clone();
-                        correct_info.line_number = i;
-                        syntax_error(&correct_info, format!("Expression contains more closing than opening brackets!"))
-                    }
-
-                    depth -= 1;
-                    push_word!();
-                }
-            }
-            else {
-                escape_char = false;
-                continue;
-            }
-        }
-        push_word!();
-        if depth == 0 {
-            if line.content.len() != 0 {
-                line.line_number = i;
-                lines.push(line);
-                //lines.push(parse_line(line, &file_name, i+1));
-                //execute_line(parsed_line, data);
-                line = line::Line::new(&file_name, usize::MAX);
-            }
-        }
-    }
-    return lines;
-}
-
-
 /// Finds all lables in an array of lines and adds them to hash_map.
 /// Returns Result<Number of lables found, Error message>
 fn load_lables(lines: &[line::Line],
@@ -250,44 +123,32 @@ fn load_lables(lines: &[line::Line],
             continue;
         }
 
-        let lable = match get_lable(&line) {
-            Some(s) => s,
-            None  => continue,
-        };
+        if let rtoken::Rtoken::LableLiteral(lable) = &line.content[0].rtoken {
+            if hash_map.get(&lable[..]).is_some() {
+                return Result::Err(format!("Redefinition of lable \"{}\".", &lable));
+            }
 
-        if hash_map.get(&lable).is_some() {
-            return Result::Err(format!("Redefinition of lable \"{}\".", &lable));
+            hash_map.insert(lable.clone(), i);
+            counter += 1;
         }
-
-        hash_map.insert(lable.clone(), i);
-        counter += 1;
     }
 
     Result::Ok(counter)
 }
 
-
-fn get_lable(line: &line::Line) -> Option<String> {
-    if line.content.len() != 1 {
-        return None;
-    }
-
-    if line.content[0].string.len() <= 1 {
-        return None;
-    }
-
-    if line.content[0].string.chars().nth(0).unwrap() == '!' {
-        return Some((&line.content[0].string[1..]).to_string());
-    }
-
-    return None;
-}
-
-
-pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, data: &mut program_data::ProgramData) {
+pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
+                       file_name: &str,
+                       data: &mut program_data::ProgramData) {
     let mut index = 0;
     let mut info = source_info::SourceInfo::new(index, &file_name, &file_name); // TODO add text
-    let lines: Vec<line::Line> = parse_file(input_file_reader, &info, &file_name[..]);
+    let lines: Vec<line::Line> = match parser::parse_file(input_file_reader, &info, &file_name[..]) {
+        Err((err, line_num)) => {
+            info.line_number = line_num;
+            syntax_error(&info, err);
+        },
+        Ok(l) => l,
+    };
+    // eprintln!("{:?}", &lines);
 
     match load_lables(&lines, &mut data.lables) {
         Ok(n) => {
@@ -302,13 +163,7 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, dat
 
     // looping through every (assignment +) expression.
     while index != lines.len() {
-        info.line_number = lines[index].line_number+1;
-
-        // Skipping lables
-        if get_lable(&lines[index]).is_some() {
-            index += 1;
-            continue;
-        }
+        info.line_number = lines[index].line_number;
 
         if data.debug {
             eprint!("{}", format!("RUN {}\t| ", &info.line_number).bright_yellow());
@@ -319,7 +174,10 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, dat
         data.add_primitive_functions();
 
         // Splitting assignment and expression
-        let (assign, exp_start_index) = parse_assignment(&lines[index].content[..], &info);
+        let (assign, exp_start_index) = match parse_assignment(&lines[index].content[..], &info) {
+            Ok(tuple) => tuple,
+            Err(e) => syntax_error(&info, e),
+        };
         // Resolves expressions and returns a value;
         let (ret, exp_end_index) = resolve_exp(&lines[index].content[exp_start_index..], &info, &data);
 

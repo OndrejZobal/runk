@@ -1,25 +1,22 @@
 use std::fmt;
+use crate::parser::rtoken;
 
+#[derive(Clone)]
 pub struct Word {
-    pub string: String,
+    pub rtoken: rtoken::Rtoken,
+    pub original: String,
     pub column: u64,
     pub line: u64,
 }
 
-impl Word {
-    pub fn clone(&self) -> Word {
-        Word { string: self.string.clone(), column: self.column, line: self.line }
-    }
-}
-
 impl fmt::Display for Word {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", &self.string)
+        write!(f, "{}({})", &self.rtoken, &self.original)
     }
 }
 
 impl fmt::Debug for Word {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", &self.string)
+        write!(f, "{}({})", &self.rtoken, &self.original)
     }
 }

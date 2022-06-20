@@ -36,7 +36,6 @@ N compicated_function: (+
 T text: "What the heck?"
 L lable: !loop
 ""
-"\"bruh\""
 
 # (out $integer)
 
@@ -69,3 +68,5 @@ order: (+ $order 1)                                 # Increment order.
 (jumpnz (<= $order $max) $lable)                        # Jumps if condition is not equal to zero. 
 
 (out "And that's it!")
+
+Z bruh: 1

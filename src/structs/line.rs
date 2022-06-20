@@ -1,6 +1,7 @@
 use super::word;
 use std::fmt;
 
+#[derive(Debug)]
 pub struct Line<'a> {
     pub file_name: &'a str,
     pub line_number: usize,
@@ -21,7 +22,7 @@ impl fmt::Display for Line<'_> {
     fn fmt<'a>(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut string = String::new();
         for word in &self.content {
-            string.push_str(&word.string);
+            string.push_str(&word.original);
             string.push_str(" ")
         }
         write!(f, "{}", string)
