@@ -1,0 +1,22 @@
+
+# =========
+# Fibonacci
+# =========
+(out "World's first runk powered Fibonacci generator!")
+
+(out "How many Fibonacci numbers would you like to calculate?")
+Z max: (num (in))
+Z n1: 1
+Z n2: 0
+Z helper: 0
+N order: 1
+
+!loop                                               # A lable to return to at the beginning of every iteration.
+(out $order "th Fibonacci number is " $n2 "!")      # Prints previous number.
+helper: $n1                                         # Saving current number to herlper
+n1: (+ $n1 $n2)                                     # Sets current number to: current number + previous number
+n2: $helper                                         # Copyies helper into previous number
+order: (+ $order 1)                                 # Increment order.
+(jumpnz (<= $order $max) !loop)                     # Jumps if condition is not equal to zero.
+
+(out "And that's it!")
