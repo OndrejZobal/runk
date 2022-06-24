@@ -136,11 +136,16 @@ fn load_lables(lines: &[line::Line],
     Result::Ok(counter)
 }
 
-pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>, file_name: &str, data: &mut program_data::ProgramData) {
+pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
+                       file_name: &str,
+                       data: &mut program_data::ProgramData) {
     let mut index = 0;
     let mut info = source_info::SourceInfo::new(index, &file_name, &file_name); // TODO add text
     let lines: Vec<line::Line> = match parser::parse_file(input_file_reader, &info, &file_name[..]) {
-        Err(e) => syntax_error(&info, e),
+        Err((err, line_num)) => {
+            info.line_number = line_num;
+            syntax_error(&info, err);
+        },
         Ok(l) => l,
     };
     // eprintln!("{:?}", &lines);

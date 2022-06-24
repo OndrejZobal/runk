@@ -1,15 +1,25 @@
 pub mod rtoken;
-use std::io::{ BufRead };
+use std::io::BufRead;
 use crate::structs::{ word, source_info, line };
 use num_bigint::BigInt;
+use num_traits::Zero;
+use crate::structs::var;
+use colored::Colorize;
 
 fn is_special_operator(c: &char) -> bool {
     "(:".chars().any(|s| s.eq(c))
 }
 
+enum PushString {
+    Yes,
+    No,
+    Separately,
+}
+
+
 struct OpCancel {
     pub string: String,
-    pub push_string: bool,
+    pub push_string: PushString,
     pub acc_literally: bool,
 }
 
@@ -28,14 +38,8 @@ fn parse_string(s: &str) -> Option<(rtoken::Rtoken, Option<OpCancel>)> {
 
     if s.len() >= 2 {
         // Text literal
-        if s.chars().nth(0).unwrap() == '"' {
-                return Some((rtoken::Rtoken::TextLiteral(s[1..].to_string()),
-                    Some(OpCancel {
-                        string: "\"".to_string(),
-                        push_string: false,
-                        acc_literally: true,
-                    }))
-                );
+        if s.chars().nth(0).unwrap() == '"' && s.chars().last().unwrap() == '"' {
+            return Some((rtoken::Rtoken::TextLiteral(s[1..s.len()-1].to_string()), None));
         }
 
         // Lable literals
@@ -53,19 +57,53 @@ fn parse_string(s: &str) -> Option<(rtoken::Rtoken, Option<OpCancel>)> {
     if s == "("  { return Some((rtoken::Rtoken::FunctionStart,
                             Some(OpCancel {
                                 string: ")".to_string(),
-                                push_string: true,
+                                push_string: PushString::Separately,
                                 acc_literally: false,
                             }))
     )}
     if s == ")"  { return Some((rtoken::Rtoken::FunctionEnd, None)) }
     if s == "->" { return Some((rtoken::Rtoken::OnFunctionFail, None)) }
 
+    // Data types
+    // Integer
+    if s == "Z" {
+        return Some(
+            (
+                rtoken::Rtoken::DataType(var::Var::z(Zero::zero()).unwrap()),
+                None,
+            )
+    )}
+    // Natural number
+    if s == "N" {
+        return Some(
+            (
+                rtoken::Rtoken::DataType(var::Var::n(Zero::zero()).unwrap()),
+                None,
+            )
+    )}
+    // Text
+    if s == "T" {
+        return Some(
+            (
+                rtoken::Rtoken::DataType(var::Var::t("".to_string()).unwrap()),
+                None,
+            )
+    )}
+    // Lable
+    if s == "L" {
+        return Some(
+            (
+                rtoken::Rtoken::DataType(var::Var::l("".to_string()).unwrap()),
+                None,
+            )
+    )}
+
     return Some((rtoken::Rtoken::Plain(s.to_string()), None));
 }
 
 pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
                           into: &source_info::SourceInfo,
-                          file_name: &'a str) -> Result<Vec::<line::Line<'a>>, String> {
+                          file_name: &'a str) -> Result<Vec::<line::Line<'a>>, (String, usize)> {
     // This variable will eventually be returned.
     let mut lines = Vec::<line::Line>::new();
     // Line of the current interation.
@@ -106,14 +144,19 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
         }
     }
 
-    for (i_line, curr_input_line) in input_file_reader.lines().enumerate() {
-        let mut skip_next_c = false;
-        let mut acc_literally = false;
+    let mut skip_next_c = false;
+    let mut acc_literally = false;
 
+    for (i_line, curr_input_line) in input_file_reader.lines().enumerate() {
         for i_char in 0..curr_input_line.as_ref().unwrap().len() {
             // For every char in every line
             let c = curr_input_line.as_ref().unwrap().chars().nth(i_char).unwrap();
+
             if skip_next_c == true {
+                if acc_literally {
+                    accumulator.push(c);
+                }
+
                 skip_next_c = false;
                 continue;
             }
@@ -121,8 +164,12 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
             // Popping nesting of pair operators like () or ""
             if nesting_stack.len() > 0 {
                 if nesting_stack.iter().last().unwrap().string == c.to_string() {
-                    push_rtoken!(accumulator);
-                    if nesting_stack.iter().last().unwrap().push_string {
+                    if let PushString::Yes = nesting_stack.iter().last().unwrap().push_string {
+                        accumulator.push(c);
+                        push_rtoken!(accumulator);
+                    }
+                    else if let PushString::Separately = nesting_stack.iter().last().unwrap().push_string  {
+                        push_rtoken!(accumulator);
                         let mut string = c.to_string();
                         push_rtoken!(string);
                     }
@@ -139,11 +186,15 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
                 }
             }
 
+            // Skip the following character.
+            else if c == '\\' {
+                skip_next_c = true;
+                continue;
+            }
             if acc_literally {
                 accumulator.push(c);
                 continue;
             }
-
             // Skip comments.
             if c == '#' {
                 break;
@@ -158,21 +209,18 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
                 let mut string = c.to_string();
                 push_rtoken!(string);
             }
-            // FIXME Very bad
-            // String literals
+            // Text literals
             else if c == '"' {
-                let string = c.to_string();
-                accumulator.push_str(&string[..]);
+                push_rtoken!(accumulator);
+                acc_literally = true;
                 nesting_stack.push(OpCancel {
                     string: "\"".to_string(),
-                    push_string: false,
+                    push_string: PushString::Yes,
                     acc_literally: true,
                 });
-                acc_literally = true;
-            }
-            // Skip the following character.
-            else if c == '\\' {
-                skip_next_c = true;
+
+                let string = c.to_string();
+                accumulator.push_str(&string[..]);
             }
             // c to acc.
             else {
@@ -181,13 +229,19 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
             }
         }
 
+        if acc_literally {
+            // Add the endline to acc because .lines() removes them
+            accumulator.push_str("\n");
+        }
+        else {
+            // End of line is also a space, so we need to push acc.
+            push_rtoken!(accumulator);
+        }
+
         //eprintln!("nesting stack len: {}", nesting_stack.len().to_string());
         if nesting_stack.len() == 0 {
-            // Push last word
-            push_rtoken!(accumulator);
             // Push this line (if line is nt empty)
             if line.content.len() > 0 {
-                eprintln!("{:?}", line);
                 lines.push(line);
             }
             // Start new line
@@ -196,7 +250,11 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
     }
 
     if nesting_stack.len() != 0 {
-        return Err(format!("The entrance stone has yet to be closed! ({})", nesting_stack[nesting_stack.len()-1].string));
+        return Err((
+            format!("Nesting error, missing \"{}\"!",
+                    &nesting_stack[nesting_stack.len()-1].string.italic()),
+            nesting_stack.len()+1
+        ));
     }
 
     return Ok(lines);
