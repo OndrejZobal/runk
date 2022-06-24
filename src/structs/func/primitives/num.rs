@@ -18,7 +18,7 @@ pub fn get_func() -> Func {
 pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
     if let var::Var::T(t) = args[0].clone() {
         return func_return::FuncReturn{
-            var: match var::Var::from_str(&t[..]) {
+            var: match var::Var::num_from_str(&t[..]) {
                 Ok(v) =>  Ok(v.clone()),
                 Err(_e) => Err(format!("Cannot convert \"{}\" to a number!", args[0]))
             },

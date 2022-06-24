@@ -10,9 +10,10 @@ colored = "*"
 clap = "*"
 num-bigint = "0.4.*"
 num-traits = "0.2.*"
+derive_more = "0.99.*"
 
 [profile.release]
-#opt-level = "z"
+opt-level = 3
 strip = true
 lto = true
 codegen-units = 1
