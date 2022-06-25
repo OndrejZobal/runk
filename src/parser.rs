@@ -148,7 +148,7 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
     let mut acc_literally = false;
 
     for (i_line, curr_input_line) in input_file_reader.lines().enumerate() {
-        for i_char in 0..curr_input_line.as_ref().unwrap().len() {
+        for i_char in 0..curr_input_line.as_ref().unwrap().chars().count() {
             // For every char in every line
             let c = curr_input_line.as_ref().unwrap().chars().nth(i_char).unwrap();
 
