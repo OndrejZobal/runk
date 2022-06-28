@@ -66,7 +66,7 @@ fn parse_string(s: &str) -> Option<(rtoken::Rtoken, Option<OpCancel>)> {
 
     // Data types
     // Integer
-    if s == "Z" {
+    if s == "Int" {
         return Some(
             (
                 rtoken::Rtoken::DataType(var::Var::z(Zero::zero()).unwrap()),
@@ -74,7 +74,7 @@ fn parse_string(s: &str) -> Option<(rtoken::Rtoken, Option<OpCancel>)> {
             )
     )}
     // Natural number
-    if s == "N" {
+    if s == "Nat" {
         return Some(
             (
                 rtoken::Rtoken::DataType(var::Var::n(Zero::zero()).unwrap()),
@@ -82,7 +82,7 @@ fn parse_string(s: &str) -> Option<(rtoken::Rtoken, Option<OpCancel>)> {
             )
     )}
     // Text
-    if s == "T" {
+    if s == "Txt" {
         return Some(
             (
                 rtoken::Rtoken::DataType(var::Var::t("".to_string()).unwrap()),
@@ -90,7 +90,7 @@ fn parse_string(s: &str) -> Option<(rtoken::Rtoken, Option<OpCancel>)> {
             )
     )}
     // Lable
-    if s == "L" {
+    if s == "Lab" {
         return Some(
             (
                 rtoken::Rtoken::DataType(var::Var::l("".to_string()).unwrap()),

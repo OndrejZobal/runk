@@ -6,19 +6,19 @@
 # 'runk' which stands for Ronald's Universal Number Kounter and handles all math
 # for every machine on earth
 
-33333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333 # Damn... This line is real long isn't it?
+3333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333333 # Damn... This line is real long isn't it?
 -333
 
 # Integer
-Z natural: -100
+Int natural: -100
 natural: 300
 # Natural number
-Z integer: -20
+Int integer: -20
 
 # Math operators with no argumets.
-N no_args: (+ (+) (-) (*) (/))
+Nat no_args: (+ (+) (-) (*) (/))
 
-N compicated_function: (+
+Nat compicated_function: (+
   (+ 10 $natural
      (+ 15 # Comments int he middle of expressions
         (+ 10
@@ -33,40 +33,38 @@ N compicated_function: (+
    49 59)
 )
 
-T text: "What the heck?"
-L lable: !loop
+Txt text: "What the hell?"
+Lab lable: !loop
 ""
 
 # (out $integer)
 
-N add_test: (+ 10 1 100)
+Nat add_test: (+ 10 1 100)
 
-Z sub_test: (- 100)
-Z sub_and_var_test: (- $add_test 10)
+Int sub_test: (- 100)
+Int sub_and_var_test: (- $add_test 10)
 
-Z mul_test: (* 2 2 2 2 2)
+Int mul_test: (* 2 2 2 2 2)
 
-N div_test: (/ 2048 2 16 4)
-
-Z bruhhhh: (+ $add_test $sub_test)
+Nat div_test: (* 2048 2 16 4)
 
 # =========
 # Fibonacci
 # =========
-Z max: 100
-Z n1: 1
-Z n2: 0
-Z helper: 0
-N order: 1
+Int max: 100
+Int n1: 1
+Int n2: 0
+Int helper: 0
+Nat order: 1
 
 !loop                                               # A lable to return to at the beginning of every iteration.
-(out $order "th Fibonacci number is" $n2 "!")       # Prints previous number.
+(out $order "th Fibonacci number is: " $n2 "!")     # Prints previous number.
 helper: $n1                                         # Saving current number to herlper
 n1: (+ $n1 $n2)                                     # Sets current number to: current number + previous number
 n2: $helper                                         # Copyies helper into previous number
 order: (+ $order 1)                                 # Increment order.
-(jumpnz (<= $order $max) $lable)                        # Jumps if condition is not equal to zero. 
+(jumpnz (<= $order $max) $lable)                    # Jumps if condition is not equal to zero. 
 
 (out "And that's it!")
 
-Z bruh: 1
+Int bruh: 1
