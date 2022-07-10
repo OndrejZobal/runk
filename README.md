@@ -18,7 +18,7 @@ I thought we were missing out so I decided to make it here as well.
 [Evidence of runk existing](https://twitter.com/6thgrade4ever/status/1433519577892327424)
 
 ## Can I use runk to do math on all computers on Earth?
-It's a work in progress, so it doesn't really work yet. Also as you might have
+As I said it's a work in progress, so it doesn't really work yet. Also as you might have
 guessed from the name I am not as confident in my programming skills as Ronald,
 so it might not be as great.
 
@@ -33,7 +33,7 @@ and it should also work.
 # What works
 The interpreter is not yet fully implemented, but some things already work. You can have a look at my [test file](examples/test.runk) everything in this file should always work and the interpreter should exit with 0.
 
-Here is an example of fuconacci sequence in runk.
+Here is an example of fibonacci sequence in runk.
 
 ``` runk
 Int max: 1000
@@ -43,14 +43,14 @@ Int helper: 0
 Nat order: 1
 
 !loop                                               # A lable to return to at the beginning of every iteration.
-(out $order "th Fibonacci number is" $n2 "!")       # Prints previous number.
+(line $order "th Fibonacci number is" $n2 "!")      # Prints previous number.
 helper: $n1                                         # Saving current number to herlper
 n1: (+ $n1 $n2)                                     # Sets current number to: current number + previous number
 n2: $helper                                         # Copyies helper into previous number
 order: (+ $order 1)                                 # Increment order.
-(jumpnz (< $n2 $max) $lable)                        # Jumps if condition is not equal to zero. 
+(goif (< $n2 $max) $lable)                          # Jumps if condition is not equal to zero. 
 
-(out "And that's it!")
+(line "And that's it!")
 ```
 
 See the [full program](examples/fibonacci/fibonacci.runk)!

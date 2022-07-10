@@ -1,8 +1,5 @@
 World's first runk powered Fibonacci generator!
-When should I stop?
-When should I stop?
-When should I stop?
-1th: 0
+Calculate until: Calculate until: Calculate until: 1th: 0
 2th: 1
 3th: 1
 4th: 2

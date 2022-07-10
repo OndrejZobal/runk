@@ -13,14 +13,14 @@ macro_rules! color_print {
 }
 
 pub fn syntax_error(info: &source_info::SourceInfo, message: String) -> ! {
-    color_print!("Syntax Error: ", red bold);
+    color_print!("\nSyntax Error: ", red bold);
     eprintln!("{}:{}: {}", info.file_name.bold(), info.line_number.to_string().bold(), message);
     process::exit(1);
 
 }
 
 pub fn runtime_error(info: &source_info::SourceInfo, message: String) -> ! {
-    color_print!("Runtime Error: ", red bold);
+    color_print!("\nRuntime Error: ", red bold);
     eprintln!("{}:{}: {}", info.file_name.bold(), info.line_number.to_string().bold(), message);
     process::exit(1);
 

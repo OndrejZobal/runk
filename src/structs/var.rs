@@ -321,11 +321,11 @@ impl Var {
             Var::Z(z) => {
                 format!("{}", z)
             },
-            Var::T(n) => {
-                format!("{}", n)
+            Var::T(t) => {
+                format!("{}", t)
             },
-            Var::L(z) => {
-                format!("!{}", z)
+            Var::L(_l) => {
+                format!("")
             },
         }
     }

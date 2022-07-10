@@ -24,23 +24,42 @@ fn execute_function(operation: &word::Word,
         return func_return::FuncReturn::error(format!(
             "Invalid token given as function name \"{}\"." , operation));
     }
+    /// FIXME BROKEN LOL
     match data.funcs.get(&string) {
         Some(f) => {
             match &f.args {
                 // Need to ensure that the supplied operands only contains var variants
                 // specified in 'vec'
                 func::ArgSpec::Unlimited(vec) => {
-                    for op in &mut *operands {
+                    for i in 0..operands.len() {
                         let mut found = false;
                         for supported in vec {
-                            if !op.eq_type(supported) {
+                            if operands[i].eq_type(supported) {
                                 found = true;
                             }
                         }
                         if !found {
-                            return func_return::FuncReturn::error(format!(
-                                "Unsupported argument type \"{}\" supplied to function \"{}\". (Supported types: {:?})" ,
-                                &op, &string, vec));
+                            // This var's type was not found in supported type.
+                            // We will now try to convert our unsupported variables
+                            // to any of the supported types.
+                            // We will start from the first supported and move down and
+                            // we will go with the first type that works.
+                            for supported in vec {
+                                let mut temp = supported.clone();
+                                match operands[i].fit_into(&mut temp) {
+                                    Ok(_var) => {
+                                        operands[i] = temp;
+                                        found = true;
+                                        break;
+                                    },
+                                    Err(_e) => continue,
+                                };
+                            }
+                            if !found {
+                                return func_return::FuncReturn::error(format!(
+                                    "Unsupported argument type \"{}\" supplied to function \"{}\". (Supported types: {:?})" ,
+                                    &operands[i], &string, vec));
+                            }
                         }
                     }
                 },

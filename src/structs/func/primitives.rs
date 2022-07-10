@@ -4,16 +4,22 @@ pub mod add;
 pub mod sub;
 pub mod mul;
 pub mod div;
-pub mod out;
-pub mod jump;
+pub mod go;
+pub mod goif;
 pub mod equal;
-pub mod jumpnz;
 pub mod lesser;
 pub mod r#in;
-pub mod num;
+pub mod int;
+pub mod nat;
 pub mod greater;
 pub mod lesser_equal;
 pub mod greater_equal;
+pub mod err;
+pub mod cat;
+pub mod cats;
+pub mod line;
+pub mod lines;
+pub mod exit;
 
 impl super::super::program_data::ProgramData {
     pub fn add_primitive_functions(&mut self) {
@@ -27,9 +33,16 @@ impl super::super::program_data::ProgramData {
         self.funcs.insert(format!("<="),     lesser_equal::get_func());
         self.funcs.insert(format!(">="),     greater_equal::get_func());
         self.funcs.insert(format!("in"),     r#in::get_func());
-        self.funcs.insert(format!("out"),    out::get_func());
-        self.funcs.insert(format!("num"),    num::get_func());
-        self.funcs.insert(format!("jump"),   jump::get_func());
-        self.funcs.insert(format!("jumpnz"), jumpnz::get_func());
+        self.funcs.insert(format!("int"),    int::get_func());
+        self.funcs.insert(format!("nat"),    nat::get_func());
+        self.funcs.insert(format!("go"),     go::get_func());
+        self.funcs.insert(format!("goif"),   goif::get_func());
+        self.funcs.insert(format!("err"),    err::get_func());
+        self.funcs.insert(format!("cat"),    cat::get_func());
+        self.funcs.insert(format!("cats"),   cats::get_func());
+        self.funcs.insert(format!("line"),   line::get_func());
+        self.funcs.insert(format!("lines"),  lines::get_func());
+        self.funcs.insert(format!("exit"),   exit::get_func());
+
     }
 }

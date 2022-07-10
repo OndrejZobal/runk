@@ -21,7 +21,7 @@ pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
     if let var::Var::Z(cond) = &args[0] {
         if *cond == Zero::zero() {
             return func_return::FuncReturn{
-                var: Ok(args[0].clone()),
+                var: Ok(var::Var::t(format!("")).unwrap()),
                 jump_to: None,
             };
         }
@@ -29,7 +29,7 @@ pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
 
     if let var::Var::L(s) = &args[1] {
         return func_return::FuncReturn{
-            var: Ok(args[0].clone()),
+            var: Ok(var::Var::t(format!("")).unwrap()),
             jump_to: Some(s.clone()),
         };
     }

@@ -36,7 +36,7 @@ Nat compicated_function: (+
 Txt text: "What the hell?"
 ""
 
-# (out $integer)
+# (line $integer)
 
 Nat add_test: (+ 10 1 100)
 
@@ -58,13 +58,14 @@ Nat order: 1
 
 Lab lable: !loop
 !loop                                               # A lable to return to at the beginning of every iteration.
-(out $order "th Fibonacci number is: " $n2 "!")     # Prints previous number.
+(line $order "th Fibonacci number is: " $n2 "!")    # Prints previous number.
 helper: $n1                                         # Saving current number to herlper
 n1: (+ $n1 $n2)                                     # Sets current number to: current number + previous number
 n2: $helper                                         # Copyies helper into previous number
 order: (+ $order 1)                                 # Increment order.
-(jumpnz (<= $order $max) $lable)                    # Jumps if condition is not equal to zero. 
+(goif (<= $order $max) $lable)                      # Jumps if condition is not equal to zero. 
 
-(out "And that's it!")
+(line)
+(line "And that's it!")
 
 Int bruh: 1

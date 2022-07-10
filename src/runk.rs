@@ -1,7 +1,7 @@
 use std::collections;
 use colored::Colorize;
 use num_traits::{ Zero };
-use std::io::{ BufRead };
+use std::io::{ BufRead, Write };
 
 use crate::structs::{var, assign, program_data, word, source_info, line, optresult};
 use crate::prints::{syntax_error, runtime_error};
@@ -60,10 +60,9 @@ fn execute_assignment(assign: &Option<assign::Assign>,
                      data: &mut program_data::ProgramData) -> Option<usize> {
     // Processing assignment
     if assign.is_none() {
-        if data.debug {
-            color_print!("Not Assigned: ", yellow);
-            eprintln!("{}", value);
-        }
+        print!("{}", value.plain_string());
+        // Days since caching stdout caused issues: 0
+        std::io::stdout().flush().unwrap();
         return None;
     }
 

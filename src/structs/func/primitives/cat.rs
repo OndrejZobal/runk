@@ -10,23 +10,21 @@ pub fn get_func() -> Func {
         args: func::ArgSpec::Unlimited(
             vec!(
                 var::Var::z(Zero::zero()).unwrap(),
-                var::Var::n(Zero::zero()).unwrap()
+                var::Var::n(Zero::zero()).unwrap(),
+                var::Var::t(format!("")).unwrap(),
             )
         ),
     }
 }
 
 pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
-    for (i, arg) in args.iter().enumerate() {
-        print!("{}", arg.plain_string());
-        if i != args.len()-1 {
-            //print!(" ");
-        }
+    let mut string = String::new();
+    for arg in args.iter() {
+        string.push_str(&arg.plain_string());
     }
-    println!("");
 
     return func_return::FuncReturn{
-        var: Ok(var::Var::create_numeric_var(None)),
+        var: Ok(var::Var::t(string).unwrap()),
         jump_to: None
     }
 }
