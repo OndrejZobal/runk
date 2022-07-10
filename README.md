@@ -1,10 +1,12 @@
 <img src="logo.gif">
 
+> Please do not confuse this with Ronald's Universal Number Kruncher
+
 [![Rust](https://github.com/OndrejZobal/runk/actions/workflows/rust.yml/badge.svg)](https://github.com/OndrejZobal/runk/actions/workflows/rust.yml)
 
 # Ridiculously Useless Numeric Katastrophe
-
-> Please do not confuse this with Ronald's Universal Number Kruncher
+A scripting language and an interpreter. Runk can crunch numbers and handle basic logic. 
+Feel free to try it out, but I have to warn you... It's ~~useless~~ a work in progress.
 
 ## What is runk?
 runk is a standard Unix utility that does math on all computers on Earth!
@@ -31,19 +33,14 @@ and it should also work.
 # What works
 The interpreter is not yet fully implemented, but some things already work. You can have a look at my [test file](examples/test.runk) everything in this file should always work and the interpreter should exit with 0.
 
-My latest breakthrough is *tricking* runk into displaying the Fibonacci sequence!
+Here is an example of fuconacci sequence in runk.
 
 ``` runk
-#!/bin/env runk
-
-# =========
-# Fibonacci
-# =========
-Z max: 1000
-Z n1: 1
-Z n2: 0
-Z helper: 0
-N order: 1
+Int max: 1000
+Int n1: 1
+Int n2: 0
+Int helper: 0
+Nat order: 1
 
 !loop                                               # A lable to return to at the beginning of every iteration.
 (out $order "th Fibonacci number is" $n2 "!")       # Prints previous number.
@@ -56,6 +53,8 @@ order: (+ $order 1)                                 # Increment order.
 (out "And that's it!")
 ```
 
+See the [full program](examples/fibonacci/fibonacci.runk)!
+
 # Syntax
 You can see these [examples](examples/).
 
@@ -65,23 +64,23 @@ Here is how a runk source file could look like when it's fully developed (Althou
 #!/bin/env runk
 
 # Simple expression
-2 # Because expression is not assigned, it falls through and is displayed as debug output on stderr.
+2 # Because expression is not assigned, it falls through to stdout.
 
 # Direct assignment
-Z var0: 2 # var0 is equal to 2
+Int var0: 2 # var0 is equal to 2
 
 # Assignment with Single-op expression
-Z var1: (+ 1 $var0 3) # var1: 6
+IntZ var1: (+ 1 $var0 3) # var1: 6
 
 # Nested expression on previously declared variable
 var1: (- $var0 (* $var1 10))
 
 
 <file /path/to/file alias>
-Z input: <in Z alias liberal> # reads word from file (no file means stdin)
+IntZ input: <in Z alias liberal> # reads word from file (no file means stdin)
 
 # Multi-op expression
-Z var2: [10 + $($var1 * 9) / $input] # var2: 64
+IntZ var2: [10 + $($var1 * 9) / $input] # var2: 64
 
 # A lable
 !start

@@ -20,5 +20,7 @@ jobs:
       run: cargo build --verbose
     - name: Unit tests
       run: cargo test --verbose
-    - name: Interpretation tests
-      run:  cargo run -- --debug examples/test.runk
+    - name: General interpretation tests
+      run: cargo run -- --debug examples/test.runk
+    - name: Fibonacci test
+      run: cargo run examples/fibonacci/fibonacci.runk < examples/fibonacci/input.txt | diff examples/fibonacci/output.txt -

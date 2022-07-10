@@ -3,19 +3,21 @@
 # =========
 (out "World's first runk powered Fibonacci generator!")
 
-(out "How many Fibonacci numbers would you like to calculate?")
-Z max: (num (in))
-Z n1: 1
-Z n2: 0
-Z helper: 0
-N order: 1
+# This section will repeat until the user enters a valid number
+!input                                              # "Input" lable
+(out "When should I stop?")
+Int max: (num (in)) -> !input                       # Reads a number from stdin, if input is not a number, then it jumps to !input again
+(jumpnz (<= $max 0) !input)                         # If "max" is 0 or negative also return to "input"
+
+Int n1: 1
+Int n2: 0
+Int helper: 0
+Nat order: 1
 
 !loop                                               # A lable to return to at the beginning of every iteration.
-(out $order "th Fibonacci number is " $n2 "!")      # Prints previous number.
+(out $order "th: " $n2)                             # Prints previous number.
 helper: $n1                                         # Saving current number to herlper
 n1: (+ $n1 $n2)                                     # Sets current number to: current number + previous number
 n2: $helper                                         # Copyies helper into previous number
 order: (+ $order 1)                                 # Increment order.
 (jumpnz (<= $order $max) !loop)                     # Jumps if condition is not equal to zero.
-
-(out "And that's it!")

@@ -34,7 +34,6 @@ Nat compicated_function: (+
 )
 
 Txt text: "What the hell?"
-Lab lable: !loop
 ""
 
 # (out $integer)
@@ -57,6 +56,7 @@ Int n2: 0
 Int helper: 0
 Nat order: 1
 
+Lab lable: !loop
 !loop                                               # A lable to return to at the beginning of every iteration.
 (out $order "th Fibonacci number is: " $n2 "!")     # Prints previous number.
 helper: $n1                                         # Saving current number to herlper

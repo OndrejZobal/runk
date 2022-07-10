@@ -1,0 +1,24 @@
+World's first runk powered Fibonacci generator!
+When should I stop?
+When should I stop?
+When should I stop?
+1th: 0
+2th: 1
+3th: 1
+4th: 2
+5th: 3
+6th: 5
+7th: 8
+8th: 13
+9th: 21
+10th: 34
+11th: 55
+12th: 89
+13th: 144
+14th: 233
+15th: 377
+16th: 610
+17th: 987
+18th: 1597
+19th: 2584
+20th: 4181
