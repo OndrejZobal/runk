@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use super::var;
 use super::func::{self, *};
 
+const VAR_ERROR: &str = "ERROR";
+
 #[derive(Clone)]
 pub struct ProgramData {
     /// Stores runk program's variables
@@ -24,6 +26,10 @@ impl ProgramData {
         }
     }
 
+    pub fn add_special_variables(&mut self) {
+        self.vars.insert(VAR_ERROR.to_string(), var::Var::t(format!("")).unwrap());
+    }
+
     pub fn debug_vars_print(&self) {
         crate::color_print!("\nVariables:\n", blue italic);
         for (key, val) in self.vars.iter() {
@@ -41,5 +47,15 @@ impl ProgramData {
     pub fn debug_status(&self) {
         self.debug_vars_print();
         self.debug_funcs_print();
+    }
+
+    pub fn set_error(&mut self, string: String) -> String {
+        let old_string = self.vars.get(VAR_ERROR).unwrap().clone();
+        self.vars.insert(self::VAR_ERROR.to_string(), var::Var::t(string).unwrap());
+
+        if let var::Var::T(text) = old_string {
+            return text.clone();
+        }
+        panic!("VAR_ERROR was not initialized properly!");
     }
 }

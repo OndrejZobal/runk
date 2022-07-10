@@ -54,7 +54,7 @@ fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> Res
 /// ## Arguments
 /// line The tokenized line
 /// data Internal data of the program
-fn execute_asignment(assign: &Option<assign::Assign>,
+fn execute_assignment(assign: &Option<assign::Assign>,
                      value: &var::Var,
                      info: &source_info::SourceInfo,
                      data: &mut program_data::ProgramData) -> Option<usize> {
@@ -107,12 +107,6 @@ fn execute_asignment(assign: &Option<assign::Assign>,
     None
 }
 
-
-fn is_special_operator(c: &char) -> bool {
-    "():".chars().any(|s| s.eq(c))
-}
-
-
 /// Finds all lables in an array of lines and adds them to hash_map.
 /// Returns Result<Number of lables found, Error message>
 fn load_lables(lines: &[line::Line],
@@ -148,7 +142,6 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
         },
         Ok(l) => l,
     };
-    // eprintln!("{:?}", &lines);
 
     match load_lables(&lines, &mut data.lables) {
         Ok(n) => {
@@ -172,6 +165,7 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
         }
 
         data.add_primitive_functions();
+        data.add_special_variables();
 
         // Splitting assignment and expression
         let (assign, exp_start_index) = match parse_assignment(&lines[index].content[..], &info) {
@@ -179,16 +173,23 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
             Err(e) => syntax_error(&info, e),
         };
         // Resolves expressions and returns a value;
-        let (ret, exp_end_index) = resolve_exp(&lines[index].content[exp_start_index..], &info, &data);
+        let (ret, exp_end_index) = resolve_exp(&lines[index].content[exp_start_index..], &info, data);
 
         // Assigns the value from the expression
         match ret.var {
             Ok(v) => {
-                if exp_start_index + exp_end_index != lines[index].content.len() {
-                    syntax_error(&info, format!("Unexpected text after expression!"));
+                // If line continues beyon what was processed indicates there are incorrect
+                // and unneeded tokens following it. (resolve_exp ends when the literal
+                // is complete or in case of functions, when the nesting stacks is empty).
+                if exp_start_index + exp_end_index < lines[index].content.len() {
+                    // Special exception for when the line ends with an unprocessed OnFunctionFail token,
+                    // because checking that without processing it would be dirtier than this hack.
+                    if lines[index].content[exp_start_index + exp_end_index].rtoken != rtoken::Rtoken::OnFunctionFail {
+                        syntax_error(&info, format!("Unexpected token after expression!"));
+                    }
                 }
 
-                execute_asignment(&assign, &v, &info, data);
+                execute_assignment(&assign, &v, &info, data);
 
                 // Executes jump
                 index = match ret.jump_to {

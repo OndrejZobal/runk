@@ -1,4 +1,5 @@
 use super::var;
+use derive_more::Display;
 
 pub struct FuncReturn {
     pub var: Result<var::Var, String>,

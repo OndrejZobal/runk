@@ -27,6 +27,13 @@ pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
         }
         else {
             // TODO prevent division by 0
+            let zero: num_bigint::BigInt = Zero::zero();
+            if arg.clone().to_z().unwrap() == var::Var::Z(zero) {
+                return func_return::FuncReturn{
+                    var: Err(format!("Division by zero!")),
+                    jump_to: None
+                };
+            }
             sum /= arg.clone();
         }
     }

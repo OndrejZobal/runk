@@ -3,6 +3,7 @@
 //!
 
 use crate::structs::{var, program_data, word, source_info};
+use num_traits::Zero;
 use crate::structs::func::{ self, func_return };
 use crate::parser::rtoken;
 
@@ -72,7 +73,6 @@ fn execute_function(operation: &word::Word,
                     }
                 }
             };
-            // TODO check if arguments are ok.
             (f.func)(operands)
         },
         None => func_return::FuncReturn {
@@ -83,22 +83,81 @@ fn execute_function(operation: &word::Word,
 
 }
 
+
+fn function_fail(input: &[word::Word],
+                 info: &source_info::SourceInfo,
+                 data: &mut program_data::ProgramData) -> Option<(func_return::FuncReturn, usize)> {
+    let mut i: usize = 0;
+    let mut found_on_fail_token = false;
+
+    // Find on function fail token.
+    while i != input.len() {
+        if let rtoken::Rtoken::OnFunctionFail = input[i].rtoken {
+            found_on_fail_token = true;
+            i += 1;
+            break;
+        }
+        i += 1;
+    }
+
+    if !found_on_fail_token {
+        return None;
+    }
+
+    // Check length.
+    if input.len() <= i {
+        runtime_error(&info, format!("No lable literal or a function call after function onfail token"));
+    }
+
+    match &input[i].rtoken {
+        rtoken::Rtoken::FunctionStart => {
+            let (func_result, func_i) = resolve_exp(&input[i..], &info, data);
+            return Some((func_result, i+func_i));
+        },
+        rtoken::Rtoken::LableLiteral(l) => {
+            return Some((
+                func_return::FuncReturn {
+                    var: var::Var::n(Zero::zero()),
+                    jump_to: Some(l.clone()),
+                },
+                i+1
+            ))
+        },
+        _ => {
+            runtime_error(&info, format!("Error occoured during funcion onfail replacement function."))
+        }
+    };
+}
+
 fn resolve_function_expression(input: &[word::Word],
                                info: &source_info::SourceInfo,
-                               data: &program_data::ProgramData) -> (func_return::FuncReturn, usize) {
+                               data: &mut program_data::ProgramData) -> (func_return::FuncReturn, usize) {
     let mut _jump_to: Option<usize> = None;
     let mut operation: Option<word::Word> = None;
     let mut operands: Vec<var::Var> = Vec::new();
     let mut i: usize = 0;
 
     while i != input.len() {
+        // FIXME Need to look out for "->".
         if let rtoken::Rtoken::FunctionEnd = input[i].rtoken {
-            return match operation {
+            match operation {
                 None => syntax_error(&info, format!("Function name is missing")),
-                // Honestly no sure why it's i+2 and not i+1, but if it's not ther the program doesn't skip ) sometimes...
                 Some(op) => {
-                    let result = execute_function(&op, &mut operands, &data);
-                    (result, i+2)
+                    let mut result = execute_function(&op, &mut operands, &data);
+                    // If the current fucntion fails, we try to call a replacement function that
+                    // follows the original function after an OnFunctionFail token.
+                    if let Result::Err(e) = &result.var {
+                        data.set_error(e.clone()); // FIXME this need &mut data
+                        let fail = function_fail(&input[i..], &info, data);
+                        // Onfail function successfull
+                        if fail.is_some() {
+                            let (fail_result, fail_i) = fail.unwrap();
+                            result = fail_result;
+                            i += fail_i;
+                        }
+                        return (result, i+1);
+                    }
+                    return (result, i+2);
                 }
             }
         }
@@ -110,7 +169,7 @@ fn resolve_function_expression(input: &[word::Word],
             continue;
         }
 
-        let (var, end_index) = resolve_exp(&input[i..], &info, &data);
+        let (var, end_index) = resolve_exp(&input[i..], &info, data);
         if var.var.is_err() {
             return (var, end_index);
         }
@@ -123,7 +182,7 @@ fn resolve_function_expression(input: &[word::Word],
 }
 
 fn resolve_var(input: &word::Word,
-               data: &program_data::ProgramData) -> func_return::FuncReturn {
+               data: &mut program_data::ProgramData) -> func_return::FuncReturn {
     if let rtoken::Rtoken::VariableReference(string) = &input.rtoken {
         return func_return::FuncReturn {
             var: match data.vars.get(string) {
@@ -144,7 +203,7 @@ fn resolve_var(input: &word::Word,
 
 pub fn resolve_exp(input: &[word::Word],
                    info: &source_info::SourceInfo,
-                   data: &program_data::ProgramData) ->  (func_return::FuncReturn, usize){
+                   data: &mut program_data::ProgramData) ->  (func_return::FuncReturn, usize){
     if input.len() < 1 {
         syntax_error(&info, format!("Missing expression!"));
     }
@@ -158,7 +217,7 @@ pub fn resolve_exp(input: &[word::Word],
     }
 
     // Resolve variable
-    if let rtoken::Rtoken::VariableReference(string) = &input[0].rtoken {
+    if let rtoken::Rtoken::VariableReference(_string) = &input[0].rtoken {
         return (resolve_var(&input[0], data), 1);
     }
 
