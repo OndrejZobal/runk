@@ -4,6 +4,8 @@ pub mod add;
 pub mod sub;
 pub mod mul;
 pub mod div;
+pub mod bin;
+pub mod not;
 pub mod go;
 pub mod goif;
 pub mod equal;
@@ -35,6 +37,8 @@ impl super::super::program_data::ProgramData {
         self.funcs.insert(format!("in"),     r#in::get_func());
         self.funcs.insert(format!("int"),    int::get_func());
         self.funcs.insert(format!("nat"),    nat::get_func());
+        self.funcs.insert(format!("bin"),    bin::get_func());
+        self.funcs.insert(format!("not"),    not::get_func());
         self.funcs.insert(format!("go"),     go::get_func());
         self.funcs.insert(format!("goif"),   goif::get_func());
         self.funcs.insert(format!("err"),    err::get_func());
