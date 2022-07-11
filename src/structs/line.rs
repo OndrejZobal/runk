@@ -6,6 +6,7 @@ pub struct Line<'a> {
     pub file_name: &'a str,
     pub line_number: usize,
     pub content: Vec<word::Word>,
+    pub original: String,
 }
 
 impl Line<'_> {
@@ -14,6 +15,7 @@ impl Line<'_> {
             file_name: file_name,
             line_number: line_number,
             content: Vec::new(),
+            original: String::new(),
         }
     }
 }

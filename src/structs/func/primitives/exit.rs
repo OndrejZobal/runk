@@ -24,10 +24,7 @@ pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
         let bbox: Box<dyn ToPrimitive> = Box::new(bigint);
         let code = match bbox.to_i32() {
             Some(i) => i,
-            None => return func_return::FuncReturn{
-                var: Err(format!("Number is to big to be an exit code!")),
-                jump_to: None
-            },
+            None => return func_return::FuncReturn::func_error(format!("Number is to big to be an exit code!")),
         };
         process::exit(code);
     }

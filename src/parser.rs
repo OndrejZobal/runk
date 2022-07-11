@@ -112,43 +112,47 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
     let mut accumulator = String::new();
     let mut nesting_stack = Vec::<OpCancel>::new();
 
-    let i_line = 0;
-    let i_char = 0;
-
-    macro_rules! push_rtoken {
-        ( $acc:ident ) => {
-            if $acc.len() > 0 {
-                match parse_string(&$acc[..]) {
-                    Some((rt, cancel)) => {
-                        // Pusing word to line
-                        line.content.push(
-                            word::Word {
-                                rtoken: rt,
-                                original: ($acc),
-                                column: i_char,
-                                line: i_line,
-                            });
-                        // Reseting acc
-                        $acc = String::new();
-                        // Push canceling char to nesting stack.
-                        match cancel {
-                            None => {},
-                            Some(s) => {
-                                nesting_stack.push(s);
-                            }
-                        };
-                    },
-                    None => {},
-                };
-            }
-        }
-    }
-
     let mut skip_next_c = false;
     let mut acc_literally = false;
 
+
     for (i_line, curr_input_line) in input_file_reader.lines().enumerate() {
+        // Recording the column where the current word started for runk debug.
+        let mut word_start_column = 0;
+
+        macro_rules! push_rtoken {
+            ( $acc:ident, $i_line:ident, $i_char:ident ) => {
+                if $acc.len() > 0 {
+                    match parse_string(&$acc[..]) {
+                        Some((rt, cancel)) => {
+                            // Pusing word to line
+                            line.content.push(
+                                word::Word {
+                                    rtoken: rt,
+                                    original: ($acc),
+                                    column: word_start_column,
+                                    line: $i_line,
+                                    parsed_line: lines.len(),
+                                });
+                            // Reseting acc
+                            $acc = String::new();
+                            word_start_column = $i_char+1;
+                            // Push canceling char to nesting stack.
+                            match cancel {
+                                None => {},
+                                Some(s) => {
+                                    nesting_stack.push(s);
+                                }
+                            };
+                        },
+                        None => {},
+                    };
+                }
+            }
+        }
+
         for i_char in 0..curr_input_line.as_ref().unwrap().chars().count() {
+
             // For every char in every line
             let c = curr_input_line.as_ref().unwrap().chars().nth(i_char).unwrap();
 
@@ -166,12 +170,13 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
                 if nesting_stack.iter().last().unwrap().string == c.to_string() {
                     if let PushString::Yes = nesting_stack.iter().last().unwrap().push_string {
                         accumulator.push(c);
-                        push_rtoken!(accumulator);
+                        push_rtoken!(accumulator, i_line, i_char);
                     }
                     else if let PushString::Separately = nesting_stack.iter().last().unwrap().push_string  {
-                        push_rtoken!(accumulator);
+                        push_rtoken!(accumulator, i_line, i_char);
                         let mut string = c.to_string();
-                        push_rtoken!(string);
+                        push_rtoken!(string, i_line, i_char);
+
                     }
                     nesting_stack.pop();
 
@@ -201,17 +206,17 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
             }
             // Push acc, discard c.
             else if c.is_whitespace() {
-                push_rtoken!(accumulator);
+                push_rtoken!(accumulator, i_line, i_char);
             }
             // Push acc & then separately c.
             else if is_special_operator(&c) {
-                push_rtoken!(accumulator);
+                push_rtoken!(accumulator, i_line, i_char);
                 let mut string = c.to_string();
-                push_rtoken!(string);
+                push_rtoken!(string, i_line, i_char);
             }
             // Text literals
             else if c == '"' {
-                push_rtoken!(accumulator);
+                push_rtoken!(accumulator, i_line, i_char);
                 acc_literally = true;
                 nesting_stack.push(OpCancel {
                     string: "\"".to_string(),
@@ -235,23 +240,27 @@ pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
         }
         else {
             // End of line is also a space, so we need to push acc.
-            push_rtoken!(accumulator);
+            let zero_for_my_beautifull_macro = 0;
+            push_rtoken!(accumulator, i_line, zero_for_my_beautifull_macro);
         }
 
         //eprintln!("nesting stack len: {}", nesting_stack.len().to_string());
         if nesting_stack.len() == 0 {
             // Push this line (if line is nt empty)
             if line.content.len() > 0 {
+                line.original = curr_input_line.unwrap();
                 lines.push(line);
             }
             // Start new line
-            line = line::Line::new(&file_name, i_line+1);
+            // i_line+2 because arrays start with zero (+1) and we are creating struct
+            // for the next line (+1).
+            line = line::Line::new(&file_name, i_line+2);
         }
     }
 
     if nesting_stack.len() != 0 {
         return Err((
-            format!("Nesting error, missing \"{}\"!",
+            format!("Nesting error, missing a closing \"{}\"!",
                     &nesting_stack[nesting_stack.len()-1].string.italic()),
             nesting_stack.len()+1
         ));

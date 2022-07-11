@@ -34,8 +34,5 @@ pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
         };
     }
 
-    func_return::FuncReturn{
-        var: Err(format!("Could not execute jump")),
-        jump_to: None,
-    }
+    func_return::FuncReturn::func_error(format!("Could not execute jump"))
 }

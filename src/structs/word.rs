@@ -1,12 +1,19 @@
 use std::fmt;
 use crate::parser::rtoken;
+use super::line;
 
 #[derive(Clone)]
 pub struct Word {
+    /// Runk token this word represents.
     pub rtoken: rtoken::Rtoken,
+    /// The original word as it appears in the file.
     pub original: String,
-    pub column: u64,
-    pub line: u64,
+    /// Actual column in the file
+    pub column: usize,
+    /// Actual line number in the file.
+    pub line: usize,
+    /// Line number in the tokenized vector of words.
+    pub parsed_line: usize,
 }
 
 impl fmt::Display for Word {

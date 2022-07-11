@@ -367,16 +367,16 @@ impl fmt::Display for Var {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Var::N(n) => {
-                write!(f, "N({})", n)
+                write!(f, "Nat {}", n)
             },
             Var::Z(z) => {
-                write!(f, "Z({})", z)
+                write!(f, "Int {}", z)
             },
             Var::T(s) => {
-                write!(f, "T({})", s)
+                write!(f, "Txt {}", s)
             },
             Var::L(s) => {
-                write!(f, "L({})", s)
+                write!(f, "Lab {}", s)
             },
         }
     }
@@ -387,16 +387,16 @@ impl fmt::Debug for Var {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Var::N(n) => {
-                write!(f, "N({})", n)
+                write!(f, "Nat {}", n)
             },
             Var::Z(z) => {
-                write!(f, "Z({})", z)
+                write!(f, "Int {}", z)
             },
             Var::T(s) => {
-                write!(f, "T({})", s)
+                write!(f, "Txt {}", s)
             },
             Var::L(s) => {
-                write!(f, "L({})", s)
+                write!(f, "Lab {}", s)
             },
         }
     }

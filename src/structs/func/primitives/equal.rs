@@ -19,10 +19,7 @@ pub fn get_func() -> Func {
 /// Sums all variables.
 pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
     if args.len() < 2 {
-        return func_return::FuncReturn{
-            var: Err(format!("Too little argumets!")),
-            jump_to: None
-        };
+        return func_return::FuncReturn::func_error(format!("Too little argumets!"));
     }
 
     for i in 1..args.len() {

@@ -22,9 +22,8 @@ fn execute_function(operation: &word::Word,
     else {
         // Error
         return func_return::FuncReturn::error(format!(
-            "Invalid token given as function name \"{}\"." , operation));
+            "Invalid token given as function name \"{}\"." , &operation), Some(operation.clone()));
     }
-    /// FIXME BROKEN LOL
     match data.funcs.get(&string) {
         Some(f) => {
             match &f.args {
@@ -58,7 +57,7 @@ fn execute_function(operation: &word::Word,
                             if !found {
                                 return func_return::FuncReturn::error(format!(
                                     "Unsupported argument type \"{}\" supplied to function \"{}\". (Supported types: {:?})" ,
-                                    &operands[i], &string, vec));
+                                    &operands[i], &string, vec), Some(operation.clone()));
                             }
                         }
                     }
@@ -69,8 +68,8 @@ fn execute_function(operation: &word::Word,
                     // Ensure length of supplied (operands) arguments matches that of reqired args (vec).
                     if operands.len() != vec.len() {
                         return func_return::FuncReturn::error(format!(
-                            "Call to function \"{}\" doesn't have the required number of argumets." ,
-                            &string));
+                            "Call to function \"{}\" doesn't have the required number of argumets! Those are: {:?}." ,
+                            &string, vec), Some(operation.clone()));
                     }
                     for i in 0..operands.len() {
                         // if !operands[i].eq_type(&vec[i]) {
@@ -82,20 +81,20 @@ fn execute_function(operation: &word::Word,
                             Ok(var) => {
                                 var.clone()
                             },
-                            Err(e) => {
-                                return func_return::FuncReturn {
-                                    var: Result::Err(e),
-                                    jump_to: None,
-                                };
-                            },
-                        }
+                            Err(e) => return func_return::FuncReturn::error(e.clone(), Some(operation.clone())),
+                        };
                     }
                 }
             };
-            (f.func)(operands)
+
+            let mut result = (f.func)(operands);
+            if let Err((s, _opt_w)) = result.var {
+                result.var = Err((s, Some(operation.clone())));
+            }
+            return result;
         },
         None => func_return::FuncReturn {
-            var: Result::Err(format!("Function not found \"{}\"", &string)),
+            var: Result::Err((format!("Function not found \"{}\"", &string), Some(operation.clone()))),
             jump_to: None,
         },
     }
@@ -125,7 +124,7 @@ fn function_fail(input: &[word::Word],
 
     // Check length.
     if input.len() <= i {
-        runtime_error(&info, format!("No lable literal or a function call after function onfail token"));
+        fatal_error(&info, format!("No lable literal or a function call after function onfail token"), Some(&input[input.len()-1]));
     }
 
     match &input[i].rtoken {
@@ -136,14 +135,14 @@ fn function_fail(input: &[word::Word],
         rtoken::Rtoken::LableLiteral(l) => {
             return Some((
                 func_return::FuncReturn {
-                    var: var::Var::n(Zero::zero()),
+                    var: Ok(var::Var::n(Zero::zero()).unwrap()),
                     jump_to: Some(l.clone()),
                 },
                 i+1
             ))
         },
         _ => {
-            runtime_error(&info, format!("Error occoured during funcion onfail replacement function."))
+            fatal_error(&info, format!("Token \"{}\" cannot be used with \"->\"!", &input[i]), Some(&input[i]));
         }
     };
 }
@@ -160,13 +159,13 @@ fn resolve_function_expression(input: &[word::Word],
         // FIXME Need to look out for "->".
         if let rtoken::Rtoken::FunctionEnd = input[i].rtoken {
             match operation {
-                None => syntax_error(&info, format!("Function name is missing")),
+                None => fatal_error(&info, format!("Function name is missing"), Some(&input[i])),
                 Some(op) => {
                     let mut result = execute_function(&op, &mut operands, &data);
                     // If the current fucntion fails, we try to call a replacement function that
                     // follows the original function after an OnFunctionFail token.
-                    if let Result::Err(e) = &result.var {
-                        data.set_error(e.clone()); // FIXME this need &mut data
+                    if let Result::Err((s, _w)) = &result.var {
+                        data.set_error(s.clone()); // FIXME this need &mut data
                         let fail = function_fail(&input[i..], &info, data);
                         // Onfail function successfull
                         if fail.is_some() {
@@ -197,7 +196,7 @@ fn resolve_function_expression(input: &[word::Word],
         i += end_index;
     }
 
-    syntax_error(&info, format!("Expressions ended abruptly!"));
+    fatal_error(&info, format!("Expressions ended abruptly!"), Some(&input[0]));
 }
 
 fn resolve_var(input: &word::Word,
@@ -206,7 +205,7 @@ fn resolve_var(input: &word::Word,
         return func_return::FuncReturn {
             var: match data.vars.get(string) {
                 None => {
-                    Err(format!("Variable \"{}\" was not found.", string.italic()))
+                    Err((format!("Variable \"{}\" was not found.", string.italic()), Some(input.clone())))
                 },
                 Some(num) => {
                     Ok((*num).clone())
@@ -216,7 +215,7 @@ fn resolve_var(input: &word::Word,
         };
     }
 
-    func_return::FuncReturn::error(format!("Invalid token \"{}\" for a variable.", input.original.italic()))
+    func_return::FuncReturn::error(format!("Invalid token \"{}\" for a variable.", input.original.italic()), Some(input.clone()))
 }
 
 
@@ -224,13 +223,13 @@ pub fn resolve_exp(input: &[word::Word],
                    info: &source_info::SourceInfo,
                    data: &mut program_data::ProgramData) ->  (func_return::FuncReturn, usize){
     if input.len() < 1 {
-        syntax_error(&info, format!("Missing expression!"));
+        fatal_error(&info, format!("Missing expression!"), None);
     }
 
     // Function expression
     if let rtoken::Rtoken::FunctionStart = input[0].rtoken {
         if input.len() < 2 {
-            syntax_error(&info, format!("Expression ends abruptly!"));
+            fatal_error(&info, format!("Expression ends abruptly!"), Some(&input[1]));
         }
         return resolve_function_expression(&input[1..], &info, data);
     }
@@ -243,22 +242,22 @@ pub fn resolve_exp(input: &[word::Word],
     // Resolve literal
     match &input[0].rtoken {
         rtoken::Rtoken::TextLiteral(_string) => return (func_return::FuncReturn {
-            var: var::Var::text_from_word(&input[0]),
+            var: Ok(var::Var::text_from_word(&input[0]).unwrap()),
             jump_to: None,
             }, 1
         ),
         rtoken::Rtoken::LableLiteral(_string) => return (func_return::FuncReturn {
-            var: var::Var::lable_from_word(&input[0]),
+            var: Ok(var::Var::lable_from_word(&input[0]).unwrap()),
             jump_to: None,
             }, 1
         ),
         rtoken::Rtoken::NumLiteral(_string) => return (func_return::FuncReturn {
-            var: var::Var::num_from_word(&input[0]),
+            var: Ok(var::Var::num_from_word(&input[0]).unwrap()),
             jump_to: None,
             }, 1
         ),
         _ => {},
     }
 
-    return (func_return::FuncReturn {var: Err(format!("Invalid token \"{}\" in a function.", input[0].original.italic())), jump_to: None }, 1) ;
+    return (func_return::FuncReturn::error(format!("Invalid token \"{}\" in a function.", input[0].original.italic()), Some(input[0].clone())), 1) ;
 }

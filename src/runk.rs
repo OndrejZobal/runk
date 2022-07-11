@@ -4,13 +4,13 @@ use num_traits::{ Zero };
 use std::io::{ BufRead, Write };
 
 use crate::structs::{var, assign, program_data, word, source_info, line, optresult};
-use crate::prints::{syntax_error, runtime_error};
+use crate::prints::fatal_error;
 use crate::expressions::resolve_exp;
 use crate::parser::{ self, rtoken };
 use crate::color_print;
 
 /// Parses assignment (if it exsits)
-fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> Result<(Option<assign::Assign>, usize), String> {
+fn parse_assignment<'a>(input: &'a [word::Word], info: &'a source_info::SourceInfo) -> Result<(Option<assign::Assign>, usize), (String, &'a word::Word)> {
     // Parsing assignment
     let mut exp_start_index: usize = 0;
 
@@ -24,7 +24,7 @@ fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> Res
 
     // Check if expression is missing.
     if input.len() <= exp_start_index {
-        syntax_error(&info, "Missing expression!".to_string());
+        return Err((format!("Missing expression!"), &input[input.len()-1]));
     }
 
     // Nondeclarative
@@ -32,7 +32,7 @@ fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> Res
         if let rtoken::Rtoken::Plain(name) = &input[0].rtoken {
             return Ok((Some(assign::Assign::Nondec(name.to_string())), exp_start_index+1));
         }
-        return Err(format!("Variable name \"{}\" is invalid!", input[0].original.italic()));
+        return Err((format!("Variable name \"{}\" is invalid!", input[0].original.italic()), &input[0]));
     }
 
     // Declarative
@@ -41,9 +41,9 @@ fn parse_assignment(input: &[word::Word], info: &source_info::SourceInfo) -> Res
             if let rtoken::Rtoken::Plain(name) = &input[1].rtoken {
                 return Ok((Some(assign::Assign::Dec(dtype.clone(), name.to_string())), exp_start_index+1));
             }
-            return Err(format!("Variable name \"{}\" is invalid!", input[1].original.italic()));
+            return Err((format!("Variable name \"{}\" is invalid!", input[1].original.italic()), &input[1]));
         }
-        return Err(format!("Variable type \"{}\" is invalid!", input[0].original.italic()));
+        return Err((format!("Variable type \"{}\" is invalid!", input[0].original.italic()), &input[0]));
     }
 
     return Ok((None, exp_start_index));
@@ -73,13 +73,13 @@ fn execute_assignment(assign: &Option<assign::Assign>,
                 // Runk allows "redefinition" of a variable as long as the type is the same.
                 let old = data.vars.get(&string[..]).unwrap();
                 if !num.eq_type(&old) {
-                    runtime_error(&info, format!("Redefinition of variable \"{}\"!", string.italic()));
+                    fatal_error(&info, format!("Redefinition of variable \"{}\"!", string.italic()), None);
                 }
             }
 
             // Copying the acutal number to "num"
             if let Result::Err(e) = value.fit_into(&mut num) {
-                runtime_error(&info, e);
+                fatal_error(&info, e, None);
             }
 
             // New variable is beeing defined. We match agains the type specified
@@ -88,13 +88,13 @@ fn execute_assignment(assign: &Option<assign::Assign>,
         },
         assign::Assign::Nondec(string) => {
             if !data.vars.contains_key(&string[..]) {
-                runtime_error(&info, format!("Variable \"{}\" assigned before definition!", string.italic()));
+                fatal_error(&info, format!("Variable \"{}\" assigned before definition!", string.italic()), None);
             }
 
             let mut old_num: var::Var = data.vars.get(&string[..]).unwrap().clone();
 
             if value.fit_into(&mut old_num).is_err() {
-                runtime_error(&info, format!("Failiure while converting numbers during assignment."));
+                fatal_error(&info, format!("Failiure while converting numbers during assignment."), None);
             }
 
             // New variable is beeing defined. We match agains the type specified
@@ -108,8 +108,8 @@ fn execute_assignment(assign: &Option<assign::Assign>,
 
 /// Finds all lables in an array of lines and adds them to hash_map.
 /// Returns Result<Number of lables found, Error message>
-fn load_lables(lines: &[line::Line],
-               hash_map: &mut collections::HashMap<String, usize>) -> Result<usize, String> {
+fn load_lables<'a>(lines: &'a [line::Line],
+               hash_map: &mut collections::HashMap<String, usize>) -> Result<usize, (String, &'a word::Word)> {
     let mut counter = 0;
     for (i, line) in lines.iter().enumerate() {
         if line.content.len() != 1 {
@@ -118,7 +118,7 @@ fn load_lables(lines: &[line::Line],
 
         if let rtoken::Rtoken::LableLiteral(lable) = &line.content[0].rtoken {
             if hash_map.get(&lable[..]).is_some() {
-                return Result::Err(format!("Redefinition of lable \"{}\".", &lable));
+                return Result::Err((format!("Redefinition of lable \"{}\".", &lable), &line.content[0]));
             }
 
             hash_map.insert(lable.clone(), i);
@@ -135,9 +135,8 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
     let mut index = 0;
     let mut info = source_info::SourceInfo::new(index, &file_name, &file_name); // TODO add text
     let lines: Vec<line::Line> = match parser::parse_file(input_file_reader, &info, &file_name[..]) {
-        Err((err, line_num)) => {
-            info.line_number = line_num;
-            syntax_error(&info, err);
+        Err((err, _line_num)) => {
+            fatal_error(&info, err, None);
         },
         Ok(l) => l,
     };
@@ -148,14 +147,17 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
                 eprintln!("Found {} lables", n);
             }
         },
-        Err(e) => {
-            runtime_error(&info, e);
+        Err((s, w)) => {
+            info.line_number = w.line;
+            info.original = &lines[w.parsed_line].original;
+            fatal_error(&info, s, Some(&w));
         }
     }
 
     // looping through every (assignment +) expression.
     while index != lines.len() {
         info.line_number = lines[index].line_number;
+        info.original = &lines[index].original;
 
         if data.debug {
             eprint!("{}", format!("RUN {}\t| ", &info.line_number).bright_yellow());
@@ -169,7 +171,7 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
         // Splitting assignment and expression
         let (assign, exp_start_index) = match parse_assignment(&lines[index].content[..], &info) {
             Ok(tuple) => tuple,
-            Err(e) => syntax_error(&info, e),
+            Err((s, w)) => fatal_error(&info, s, Some(&w)),
         };
         // Resolves expressions and returns a value;
         let (ret, exp_end_index) = resolve_exp(&lines[index].content[exp_start_index..], &info, data);
@@ -184,7 +186,10 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
                     // Special exception for when the line ends with an unprocessed OnFunctionFail token,
                     // because checking that without processing it would be dirtier than this hack.
                     if lines[index].content[exp_start_index + exp_end_index].rtoken != rtoken::Rtoken::OnFunctionFail {
-                        syntax_error(&info, format!("Unexpected token after expression!"));
+                        fatal_error(&info,
+                                    format!("Unexpected token \"{}\" after expression!", &lines[index].content[exp_start_index+exp_end_index].original),
+                                    Some(&lines[index].content[exp_start_index+exp_end_index]),
+                        );
                     }
                 }
 
@@ -195,14 +200,20 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
                     Option::None => index+1,
                     Option::Some(s) => {
                         match data.lables.get(&s) {
-                            None => runtime_error(&info, format!("Attempted to jump to an undefined lable \"{}\"", s)),
+                            None => fatal_error(&info, format!("Attempted to jump to an undefined lable \"{}\"", s), None),
                             Some(i) => *i,
                         }
                     },
                 };
             },
-            Err(string) => {
-                runtime_error(&info, string);
+            Err((string, opt_word)) => {
+                if opt_word.is_some() {
+                    let word = opt_word.unwrap();
+
+                    fatal_error(&info, string, Some(&word));
+                }
+
+                fatal_error(&info, string, None);
             }
         }
     }
