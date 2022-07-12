@@ -24,3 +24,5 @@ jobs:
       run: cargo run -- --debug examples/test.runk
     - name: Fibonacci test
       run: cargo run examples/fibonacci/fibonacci.runk < examples/fibonacci/input.txt | diff examples/fibonacci/output.txt -
+    - name: Factorial test
+      run: cargo run examples/factorial/factorial.runk < examples/factorial/input.txt | diff examples/factorial/output.txt -

@@ -1,0 +1,10 @@
+4
+5
+Bad input
+Bad input
+10
+Bad input
+Bad input
+Bad input
+0
+exit

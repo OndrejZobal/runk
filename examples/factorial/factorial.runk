@@ -1,0 +1,26 @@
+#!/bin/env runk
+(err (line "Runk powered factorial!"))
+(err (line "Type exit to quit"))
+
+!input
+(err "Calculate factorial of: ")
+Txt input: (in)
+(goif (= $input "exit") !end)
+Nat n: (nat $input) -> !input
+Nat fact: 1
+
+(goif (not (= $n 0)) !loop)
+(line 1)
+(go !input)
+
+!loop
+fact: (* $fact $n)
+n: (- $n 1)
+(goif (> $n 0) !loop)
+(line $fact) # Printing result
+
+(go !input)
+
+!end
+(err (line "Bye!"))
+(exit 0) # Doesn't need to be there but why not test it.
