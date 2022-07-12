@@ -18,7 +18,7 @@ pub fn get_func() -> Func {
 pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
     if let var::Var::L(s) = &args[0] {
         return func_return::FuncReturn{
-            var: Ok(var::Var::z(num_bigint::ToBigInt::to_bigint(&0).unwrap()).unwrap()),
+            var: Ok(var::Var::T(format!(""))),
             jump_to: Some(s.clone()),
         };
     }

@@ -21,7 +21,6 @@ pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
     for (i, arg) in args.iter().enumerate() {
         eprint!("{}", arg.plain_string());
     }
-    println!("");
 
     return func_return::FuncReturn{
         var: Ok(var::Var::t(format!("")).unwrap()),
