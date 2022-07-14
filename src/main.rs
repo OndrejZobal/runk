@@ -28,6 +28,14 @@ fn main() {
 
     let input_file_name = args.iter().nth(1);
 
+    // Print basic information about the program.
+    if debug {
+        eprintln!("{} v{} by {}\n",
+                env!("CARGO_PKG_NAME"),
+                env!("CARGO_PKG_VERSION"),
+                env!("CARGO_PKG_AUTHORS"));
+    }
+
     let input_file_reader: Box<dyn BufRead> = match input_file_name {
         None => Box::new(BufReader::new(io::stdin())),
         Some(ref filename) => {
