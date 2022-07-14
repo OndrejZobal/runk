@@ -11,6 +11,7 @@ pub mod or;
 pub mod go;
 pub mod goif;
 pub mod equal;
+pub mod not_equal;
 pub mod lesser;
 pub mod r#in;
 pub mod int;
@@ -34,6 +35,7 @@ impl super::super::program_data::ProgramData {
         self.funcs.insert(format!("<"),      lesser::get_func());
         self.funcs.insert(format!(">"),      greater::get_func());
         self.funcs.insert(format!("="),      equal::get_func());
+        self.funcs.insert(format!("=!"),     not_equal::get_func());
         self.funcs.insert(format!("<="),     lesser_equal::get_func());
         self.funcs.insert(format!(">="),     greater_equal::get_func());
         self.funcs.insert(format!("in"),     r#in::get_func());
