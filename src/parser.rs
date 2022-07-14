@@ -1,6 +1,6 @@
 pub mod rtoken;
 use std::io::BufRead;
-use crate::structs::{ word, source_info, line };
+use crate::structs::{ word, line };
 use num_bigint::BigInt;
 use num_traits::Zero;
 use crate::structs::var;
@@ -17,13 +17,19 @@ enum PushString {
 }
 
 
+/// # Description
+/// Used in the nesting stack. Every instance represents a word that needs to
+/// appear in the source in order to pop this instance from the nesting stack.
+///
+/// For example: opening bracket will create an opcancle with a closing bracket
+/// set as the string.
 struct OpCancel {
     pub string: String,
     pub push_string: PushString,
     pub acc_literally: bool,
 }
 
-/// ## Returns
+/// # Returns
 /// Optional tumple with rtoken, and a canceling string for pair operators
 /// ex. "(" gets canceled by ")"
 fn parse_string(s: &str) -> Option<(rtoken::Rtoken, Option<OpCancel>)> {
@@ -101,9 +107,21 @@ fn parse_string(s: &str) -> Option<(rtoken::Rtoken, Option<OpCancel>)> {
     return Some((rtoken::Rtoken::Plain(s.to_string()), None));
 }
 
+/// # Description
+/// Reads runk source code from a buffer and returns a tokenized output.
+///
+/// # Arguments
+/// - `input_file_reader`: Buffer with runk source code
+/// - `info`: Information about the sourcefile. TODO Replace with error propagation
+/// - `file_name`: name of the file hwere the source comes from. TODO this is already in info.
+///
+/// # Returns
+/// - `Ok`: A vector of (tokenized) Lines.
+/// - `Err`:
+///     - String: Description of the issue intended to be shown to the user.
+///     - usize: Length of the nesting stack. TODO Replace with a line number.
 pub fn parse_file<'a>(input_file_reader: Box<dyn BufRead>,
-                          into: &source_info::SourceInfo,
-                          file_name: &'a str) -> Result<Vec::<line::Line<'a>>, (String, usize)> {
+                      file_name: &'a str) -> Result<Vec::<line::Line<'a>>, (String, usize)> {
     // This variable will eventually be returned.
     let mut lines = Vec::<line::Line>::new();
     // Line of the current interation.

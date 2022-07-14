@@ -1,6 +1,5 @@
 use std::fmt;
 use crate::parser::rtoken;
-use super::line;
 
 #[derive(Clone)]
 pub struct Word {

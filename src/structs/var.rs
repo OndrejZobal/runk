@@ -53,20 +53,12 @@ impl Var {
         Ok(Var::L(value))
     }
 
-    /// Creates a numeric variable (can be of any variant) from value.
-    pub fn create_numeric_var(value: Option<num_bigint::BigInt>) -> Self {
-        Var::Z(match value {
-            Some(v) => v,
-            None => Zero::zero(),
-        }).best_fit()
-    }
-
     /// Creates a text var from a text token:
     pub fn text_from_word(word: &word::Word) -> Result<Var, String> {
         if let rtoken::Rtoken::TextLiteral(value) = &word.rtoken {
             return Ok(Var::T(value.to_string()));
         }
-        return Err(format!("\"{}\" is not a string literal.", word.original));
+        Err(format!("\"{}\" is not a string literal.", word.original))
     }
 
     /// Creates a numeric variable from string.
@@ -103,9 +95,9 @@ impl Var {
     /// Creates a variable from a runk token.
     pub fn from_word(word: &word::Word) -> Result<Var, String> {
         return match &word.rtoken {
-            rtoken::Rtoken::TextLiteral(string) => Self::text_from_word(&word),
-            rtoken::Rtoken::LableLiteral(string) => Self::lable_from_word(&word),
-            rtoken::Rtoken::NumLiteral(string) => Self::num_from_word(&word),
+            rtoken::Rtoken::TextLiteral(_string) => Self::text_from_word(word),
+            rtoken::Rtoken::LableLiteral(_string) => Self::lable_from_word(word),
+            rtoken::Rtoken::NumLiteral(_string) => Self::num_from_word(word),
             _ => Err(format!("\"{}\" is not a literal of any type.", word.original)),
         }
     }

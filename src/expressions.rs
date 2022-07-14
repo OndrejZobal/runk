@@ -1,5 +1,5 @@
 //!
-//! Collection of functions dedicated to resolving expressions.
+//! Collection of functions for resolving runk expressions.
 //!
 
 use crate::structs::{var, program_data, word, source_info};
@@ -12,6 +12,76 @@ use crate::parser::rtoken;
 use crate::prints::*;
 
 
+/// # Description
+/// Finds a `OnFunctionFail` rtoken and call a replacement function or a lable to jump to.
+///
+/// # Args
+/// - `input`: Word array cropped from the left to the expected begining of the expression
+///            no cropping from the right though.
+/// - `info`: Info about the source that is beeing processed.
+/// - `data`: Internal state of the program.
+///
+/// # Returns
+/// - `Some`: Replacement function or lable was found.
+///     - `FuncReturn`: Struct with information souch as result of the expression, return value and a request to jump to a lable.
+///     - `usize`: Index of last Word in `input` relevant to the expression processing.
+/// - `None`: No `OnFunctionFail` rtoken was found
+fn try_replacement_function(input: &[word::Word],
+                            info: &source_info::SourceInfo,
+                            data: &mut program_data::ProgramData) -> Option<(func_return::FuncReturn, usize)> {
+    let mut i: usize = 0;
+    let mut found_on_fail_token = false;
+
+    // Find on function fail token.
+    while i != input.len() {
+        if let rtoken::Rtoken::OnFunctionFail = input[i].rtoken {
+            found_on_fail_token = true;
+            i += 1;
+            break;
+        }
+        i += 1;
+    }
+
+    if !found_on_fail_token {
+        return None;
+    }
+
+    // Check length.
+    if input.len() <= i {
+        fatal_error(&info, format!("No lable literal or a function call after function onfail token"), Some(&input[input.len()-1]));
+    }
+
+    match &input[i].rtoken {
+        rtoken::Rtoken::FunctionStart => {
+            let (func_result, func_i) = resolve_exp(&input[i..], &info, data);
+            return Some((func_result, i+func_i));
+        },
+        rtoken::Rtoken::LableLiteral(l) => {
+            return Some((
+                func_return::FuncReturn {
+                    var: Ok(var::Var::n(Zero::zero()).unwrap()),
+                    jump_to: Some(l.clone()),
+                },
+                i+1
+            ))
+        },
+        _ => {
+            fatal_error(&info, format!("Token \"{}\" cannot be used with \"->\"!", &input[i]), Some(&input[i]));
+        }
+    };
+}
+
+
+/// # Description
+/// Deals with runk argument types and conversions and calls runk functions.
+///
+/// # Arguments
+/// - `operation`: Word containing the function name.
+/// - `operands`: Vector of Words supplied as arguments to the function.
+/// - `data`: Internal state of the program.
+///
+/// # Returns
+/// - `FuncReturn`: Struct with information souch as result of the expression, return value and a request to jump to a lable.
 fn execute_function(operation: &word::Word,
                     operands: &mut Vec<var::Var>,
                     data: &program_data::ProgramData) -> func_return::FuncReturn {
@@ -20,7 +90,6 @@ fn execute_function(operation: &word::Word,
         string = string_.to_string();
     }
     else {
-        // Error
         return func_return::FuncReturn::error(format!(
             "Invalid token given as function name \"{}\"." , &operation), Some(operation.clone()));
     }
@@ -101,52 +170,19 @@ fn execute_function(operation: &word::Word,
 
 }
 
-
-fn function_fail(input: &[word::Word],
-                 info: &source_info::SourceInfo,
-                 data: &mut program_data::ProgramData) -> Option<(func_return::FuncReturn, usize)> {
-    let mut i: usize = 0;
-    let mut found_on_fail_token = false;
-
-    // Find on function fail token.
-    while i != input.len() {
-        if let rtoken::Rtoken::OnFunctionFail = input[i].rtoken {
-            found_on_fail_token = true;
-            i += 1;
-            break;
-        }
-        i += 1;
-    }
-
-    if !found_on_fail_token {
-        return None;
-    }
-
-    // Check length.
-    if input.len() <= i {
-        fatal_error(&info, format!("No lable literal or a function call after function onfail token"), Some(&input[input.len()-1]));
-    }
-
-    match &input[i].rtoken {
-        rtoken::Rtoken::FunctionStart => {
-            let (func_result, func_i) = resolve_exp(&input[i..], &info, data);
-            return Some((func_result, i+func_i));
-        },
-        rtoken::Rtoken::LableLiteral(l) => {
-            return Some((
-                func_return::FuncReturn {
-                    var: Ok(var::Var::n(Zero::zero()).unwrap()),
-                    jump_to: Some(l.clone()),
-                },
-                i+1
-            ))
-        },
-        _ => {
-            fatal_error(&info, format!("Token \"{}\" cannot be used with \"->\"!", &input[i]), Some(&input[i]));
-        }
-    };
-}
-
+/// # Description
+/// Entry function for resolving runk function calls. It mainly handles collecting information from `input` about the function
+/// and calls `execute_function` to handle the rest.
+///
+/// # Args
+/// - `input`: Word array cropped from the left to the expected begining of the expression
+///            no cropping from the right though.
+/// - `info`: Info about the source that is beeing processed.
+/// - `data`: Internal state of the program.
+///
+/// # Returns
+/// - `FuncReturn`: Struct with information souch as result of the expression, return value and a request to jump to a lable.
+/// - `usize`: Index of last Word in `input` relevant to the expression processing.
 fn resolve_function_expression(input: &[word::Word],
                                info: &source_info::SourceInfo,
                                data: &mut program_data::ProgramData) -> (func_return::FuncReturn, usize) {
@@ -156,7 +192,6 @@ fn resolve_function_expression(input: &[word::Word],
     let mut i: usize = 0;
 
     while i != input.len() {
-        // FIXME Need to look out for "->".
         if let rtoken::Rtoken::FunctionEnd = input[i].rtoken {
             match operation {
                 None => fatal_error(&info, format!("Function name is missing"), Some(&input[i])),
@@ -165,8 +200,8 @@ fn resolve_function_expression(input: &[word::Word],
                     // If the current fucntion fails, we try to call a replacement function that
                     // follows the original function after an OnFunctionFail token.
                     if let Result::Err((s, _w)) = &result.var {
-                        data.set_error(s.clone()); // FIXME this need &mut data
-                        let fail = function_fail(&input[i..], &info, data);
+                        data.set_error(s.clone());
+                        let fail = try_replacement_function(&input[i..], &info, data);
                         // Onfail function successfull
                         if fail.is_some() {
                             let (fail_result, fail_i) = fail.unwrap();
@@ -199,8 +234,18 @@ fn resolve_function_expression(input: &[word::Word],
     fatal_error(&info, format!("Expressions ended abruptly!"), Some(&input[0]));
 }
 
+
+/// # Description
+/// Takes Word with `VariableReference` rtoken and returns it's variables value.
+///
+/// # Args
+/// - `input`: Word which will be resolved as `VariableReference`
+/// - `data`: Internal state of the program.
+///
+/// # Returns
+/// Value stored in a variable named `input`
 fn resolve_var(input: &word::Word,
-               data: &mut program_data::ProgramData) -> func_return::FuncReturn {
+               data: &program_data::ProgramData) -> func_return::FuncReturn {
     if let rtoken::Rtoken::VariableReference(string) = &input.rtoken {
         return func_return::FuncReturn {
             var: match data.vars.get(string) {
@@ -219,6 +264,18 @@ fn resolve_var(input: &word::Word,
 }
 
 
+/// # Description
+/// Main entry function for expression resolution. This function is also called recursively by `resolve_function_expression`.
+///
+/// # Args
+/// - `input`: Word array cropped from the left to the expected begining of the expression
+///            no cropping from the right though.
+/// - `info`: Info about the source that is beeing processed.
+/// - `data`: Internal state of the program.
+///
+/// # Returns
+/// - `FuncReturn`: Struct with information souch as result of the expression, return value and a request to jump to a lable.
+/// - `usize`: Index of last Word in `input` relevant to the expression processing.
 pub fn resolve_exp(input: &[word::Word],
                    info: &source_info::SourceInfo,
                    data: &mut program_data::ProgramData) ->  (func_return::FuncReturn, usize){

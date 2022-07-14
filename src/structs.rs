@@ -5,5 +5,3 @@ pub mod func;
 pub mod assign;
 pub mod program_data;
 pub mod source_info;
-
-pub mod optresult;

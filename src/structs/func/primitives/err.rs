@@ -18,11 +18,11 @@ pub fn get_func() -> Func {
 }
 
 pub fn op(args: &[var::Var]) -> func_return::FuncReturn {
-    for (i, arg) in args.iter().enumerate() {
+    for arg in args {
         eprint!("{}", arg.plain_string());
     }
 
-    return func_return::FuncReturn{
+    func_return::FuncReturn{
         var: Ok(var::Var::t(format!("")).unwrap()),
         jump_to: None
     }

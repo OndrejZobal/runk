@@ -1,5 +1,4 @@
 use super::super::var;
-use num_traits::{ Zero };
 use super::super::func_return;
 use super::super::Func;
 use super::super::super::func;

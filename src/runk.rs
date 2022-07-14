@@ -1,16 +1,28 @@
 use std::collections;
 use colored::Colorize;
-use num_traits::{ Zero };
 use std::io::{ BufRead, Write };
 
-use crate::structs::{var, assign, program_data, word, source_info, line, optresult};
+use crate::structs::{var, assign, program_data, word, source_info, line };
 use crate::prints::fatal_error;
 use crate::expressions::resolve_exp;
 use crate::parser::{ self, rtoken };
-use crate::color_print;
 
-/// Parses assignment (if it exsits)
-fn parse_assignment<'a>(input: &'a [word::Word], info: &'a source_info::SourceInfo) -> Result<(Option<assign::Assign>, usize), (String, &'a word::Word)> {
+/// # Description
+/// Creates an assignment struct from a Word array.
+///
+/// # Arguments
+/// - `input`: array slice of words that may or may not contain an assignment.
+///
+/// # Returns
+/// - `Ok`: An assignment object that contains:
+///     - `Option<Assign>`: Is None if the `input` didn't contain an assignment.
+///     - `usize`: Index of the `Assign` Rtoken in the `input` array.
+/// - `Err`:
+///     - String: Description of the issue intended to be shown to the user.
+///     - Word: The problematic word.
+///
+/// TODO Consider making this an Assign method.
+fn preprocess_assignment<'a>(input: &'a [word::Word]) -> Result<(Option<assign::Assign>, usize), (String, &'a word::Word)> {
     // Parsing assignment
     let mut exp_start_index: usize = 0;
 
@@ -49,21 +61,25 @@ fn parse_assignment<'a>(input: &'a [word::Word], info: &'a source_info::SourceIn
     return Ok((None, exp_start_index));
 }
 
-/// Executes the tokenized line and assignment
+/// # Description
+/// Assigns the value to the target specified in `assign`. If `assign` is `None` the value will be printed
+/// to stdout.
 ///
-/// ## Arguments
-/// line The tokenized line
-/// data Internal data of the program
+/// # Arguments
+/// - `assign`: Struct containing details of the assignment.
+/// - `value`: A variable with the value that will be assigned.
+/// - `info`: Source information this operation relates to. TODO Remove this.
+/// - `data`: Runtime data of the runk program.
 fn execute_assignment(assign: &Option<assign::Assign>,
                      value: &var::Var,
                      info: &source_info::SourceInfo,
-                     data: &mut program_data::ProgramData) -> Option<usize> {
+                     data: &mut program_data::ProgramData) {
     // Processing assignment
     if assign.is_none() {
         print!("{}", value.plain_string());
         // Days since caching stdout caused issues: 0
         std::io::stdout().flush().unwrap();
-        return None;
+        return;
     }
 
     let bruh = assign.as_ref().unwrap().clone();
@@ -102,12 +118,20 @@ fn execute_assignment(assign: &Option<assign::Assign>,
             data.vars.insert((&string[..]).to_string(), old_num);
         },
     }
-
-    None
 }
 
-/// Finds all lables in an array of lines and adds them to hash_map.
-/// Returns Result<Number of lables found, Error message>
+/// # Description
+/// Goes through lines looking for lable declarations and adds them to `hash_map`
+///
+/// # Arguments
+/// - `lines`: List of runk lines to to search.
+/// - `hash_map`: Label storage.
+///
+/// # Returns
+/// - `Ok`: Amount of labels found.
+/// - `Err`:
+///     - String: Description of the issue intended to be shown to the user.
+///     - Word: The problematic word.
 fn load_lables<'a>(lines: &'a [line::Line],
                hash_map: &mut collections::HashMap<String, usize>) -> Result<usize, (String, &'a word::Word)> {
     let mut counter = 0;
@@ -129,12 +153,21 @@ fn load_lables<'a>(lines: &'a [line::Line],
     Result::Ok(counter)
 }
 
+/// # Description
+/// Main way of running runk code.
+///
+/// # Arguments
+/// - `input_file_reader`: Source of runk source code.
+/// - `file_name`: Name of the file that is beeing executed. Used for debug only.
+/// If the data are comming from the standard input pass "<stdin>"
+/// - `data`: Runtime data of a runk program. A this time the function expects data to be uninitialized.
+/// TODO add init to data constructor.
 pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
                        file_name: &str,
                        data: &mut program_data::ProgramData) {
     let mut index = 0;
     let mut info = source_info::SourceInfo::new(index, &file_name, &file_name); // TODO add text
-    let lines: Vec<line::Line> = match parser::parse_file(input_file_reader, &info, &file_name[..]) {
+    let lines: Vec<line::Line> = match parser::parse_file(input_file_reader, &file_name[..]) {
         Err((err, _line_num)) => {
             fatal_error(&info, err, None);
         },
@@ -169,7 +202,7 @@ pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
         data.add_special_variables();
 
         // Splitting assignment and expression
-        let (assign, exp_start_index) = match parse_assignment(&lines[index].content[..], &info) {
+        let (assign, exp_start_index) = match preprocess_assignment(&lines[index].content[..]) {
             Ok(tuple) => tuple,
             Err((s, w)) => fatal_error(&info, s, Some(&w)),
         };

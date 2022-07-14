@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use super::var;
-use super::func::{self, *};
+use super::func::{ self };
 
 const VAR_ERROR: &str = "ERROR";
 
