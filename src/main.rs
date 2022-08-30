@@ -14,6 +14,12 @@ mod expressions;
 mod prints;
 
 fn main() {
+    // Try to enable pretty colors on Windows.
+    #[cfg(target_family = "windows")]
+    match enable_ansi_support::enable_ansi_support() {
+        Ok(_) => {},
+        Err(_) => {},
+    };
 
     let mut args: Vec<_> = env::args().collect();
     let mut debug = false;

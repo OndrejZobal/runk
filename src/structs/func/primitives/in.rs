@@ -22,7 +22,13 @@ pub fn op(_args: &[var::Var]) -> func_return::FuncReturn {
     let mut buffer = String::new();
     let stdin = io::stdin();
     stdin.read_line(&mut buffer).unwrap();
+    // Remove trailing '\n'
     buffer.pop();
+    // Remove trailing '\r' if present
+    #[cfg(target_family = "windows")]
+    if buffer.chars().last().unwrap() == '\r' {
+        buffer.pop();
+    }
 
     return func_return::FuncReturn{
         var: Ok(var::Var::t(buffer).unwrap()), // Low risk unwrap
