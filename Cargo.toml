@@ -1,6 +1,7 @@
 [package]
 name = "runk"
-version = "1.0.1"
+description = "handles all math for every machine on earth"
+version = "1.0.1-updated"
 authors = ["Ondřej Zobal <ondrej@ondrejzobal.xyz>"]
 edition = "2021"
 
@@ -12,6 +13,7 @@ colored = "2.0.*"
 num-bigint = "0.4.*"
 num-traits = "0.2.*"
 derive_more = "0.99.*"
+isatty = "0.1.*"
 
 [profile.release]
 opt-level = 3

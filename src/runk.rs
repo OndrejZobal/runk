@@ -164,7 +164,8 @@ fn load_lables<'a>(lines: &'a [line::Line],
 /// TODO add init to data constructor.
 pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
                        file_name: &str,
-                       data: &mut program_data::ProgramData) {
+                       data: &mut program_data::ProgramData,
+                       _repel_mode: bool) {
     let mut index = 0;
     let mut info = source_info::SourceInfo::new(index, &file_name, &file_name); // TODO add text
     let lines: Vec<line::Line> = match parser::parse_file(input_file_reader, &file_name[..]) {
