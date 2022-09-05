@@ -14,6 +14,8 @@ pub struct ProgramData {
     /// Stores lables of a runk program. For the purpouse of jumping to them.
     pub lables: HashMap<String, usize>,
     pub debug: bool,
+    /// Register all lables from a program before execution.
+    pub prescan_lables: bool,
 }
 
 impl ProgramData {
@@ -23,6 +25,7 @@ impl ProgramData {
             funcs: HashMap::new(),
             lables: HashMap::new(),
             debug: enable_debug,
+            prescan_lables: false,
         }
     }
 

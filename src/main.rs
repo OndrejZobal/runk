@@ -1,19 +1,13 @@
 use std::env;
 use std::fs::File;
 use std::io::{self, BufReader, BufRead};
-use isatty::stdin_isatty;
+use std::process;
 use colored::Colorize;
 
-use structs::{program_data};
+#[cfg(target_family = "unix")]
+use isatty::stdin_isatty;
 
-//use clap::Parser;
-
-mod runk;
-mod parser;
-mod structs;
-mod expressions;
-#[macro_use]
-mod prints;
+use runk::structs::program_data;
 
 fn platform_eof_key() -> String {
         #[cfg(target_family = "unix")]
@@ -33,9 +27,7 @@ Copyright {}
  This is Free Software licensed under GNU GPL-3.0 or any later version.
  No warranty is provided, failures are guaranteed!
 
- Since {} relies on jumping to lables including jumps forward in code, the
- interpreter needs to see the entire file before execution begins. To signal EOF
- press {}.
+ To signal end of file press {}.
 
  Long live Ronald!\
 ",
@@ -43,7 +35,6 @@ Copyright {}
             env!("CARGO_PKG_VERSION"),
             env!("CARGO_PKG_DESCRIPTION"),
             env!("CARGO_PKG_AUTHORS"),
-            env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_NAME"),
             format!("Ctrl+{}", platform_eof_key()).bold(),
     );
@@ -81,7 +72,7 @@ fn main() {
             match file {
                 Ok(f) => Box::new(BufReader::new(f)),
                 Err(e) => {
-                    color_print!("Error: ", red bold);
+                    runk::color_print!("Error: ", red bold);
                     eprintln!("cannot read file \"{}\": {}", filename.italic(), e);
                     std::process::exit(1);
                 }
@@ -90,7 +81,9 @@ fn main() {
     };
 
     let mut program_data = program_data::ProgramData::new(debug.clone());
-    let repl_mode = is_input_stdin && stdin_isatty();
+    let mut repl_mode = false;
+    #[cfg(target_family = "unix")]
+    {repl_mode = is_input_stdin && stdin_isatty();}
 
     if repl_mode {
         print_repl_banner();
