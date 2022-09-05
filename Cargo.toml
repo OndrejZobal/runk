@@ -5,7 +5,8 @@ version = "1.0.1-updated"
 authors = ["Ondřej Zobal <ondrej@ondrejzobal.xyz>"]
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+crate-type = ["staticlib", "rlib"]
 
 [dependencies]
 enable-ansi-support = "0.1.*"

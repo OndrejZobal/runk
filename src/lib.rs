@@ -5,7 +5,13 @@ use std::io::{ BufRead, Write };
 use crate::structs::{var, assign, program_data, word, source_info, line };
 use crate::prints::fatal_error;
 use crate::expressions::resolve_exp;
-use crate::parser::{ self, rtoken };
+use crate::parser::{ rtoken, ParseResult };
+
+pub mod parser;
+pub mod structs;
+pub mod expressions;
+#[macro_use]
+pub mod prints;
 
 /// # Description
 /// Creates an assignment struct from a Word array.
@@ -73,12 +79,19 @@ fn preprocess_assignment<'a>(input: &'a [word::Word]) -> Result<(Option<assign::
 fn execute_assignment(assign: &Option<assign::Assign>,
                      value: &var::Var,
                      info: &source_info::SourceInfo,
-                     data: &mut program_data::ProgramData) {
+                     data: &mut program_data::ProgramData,
+                     force_new_line: bool) {
     // Processing assignment
     if assign.is_none() {
         print!("{}", value.plain_string());
-        // Days since caching stdout caused issues: 0
         std::io::stdout().flush().unwrap();
+        if force_new_line && value.plain_string().len() != 0 {
+            if value.plain_string().chars().last().unwrap() != '\n' {
+                eprintln!();
+                std::io::stdout().flush().unwrap();
+            }
+        }
+        // Days since caching stdout caused 0issues:
         return;
     }
 
@@ -153,6 +166,60 @@ fn load_lables<'a>(lines: &'a [line::Line],
     Result::Ok(counter)
 }
 
+fn run_runk_line<'a> (line:      &'a line::Line,
+                      info:      &source_info::SourceInfo,
+                      data:      &mut program_data::ProgramData,
+                      repl_mode: bool) -> Result<Option<String>, (String, Option<word::Word>)> {
+    if data.debug {
+        eprint!("{}", format!("RUN {}\t| ", &info.line_number).bright_yellow());
+        eprint!("{} ", line);
+        eprintln!();
+    }
+
+    // Splitting assignment and expression
+    let (assign, exp_start_index) = match preprocess_assignment(&line.content[..]) {
+        Ok(tuple)   => tuple,
+        Err((s, w)) => return Err((s, Some(w.clone()))),
+    };
+    // Resolves expressions and returns a value;
+    let (ret, exp_end_index) = resolve_exp(&line.content[exp_start_index..], &info, data);
+
+    // Assigns the value from the expression
+    match ret.var {
+        Ok(v) => {
+            // If line continues beyon what was processed indicates there are incorrect
+            // and unneeded tokens following it. (resolve_exp ends when the literal
+            // is complete or in case of functions, when the nesting stacks is empty).
+            if exp_start_index + exp_end_index < line.content.len() {
+                // Special exception for when the line ends with an unprocessed OnFunctionFail token,
+                // because checking that without processing it would be dirtier than this hack.
+                if line.content[exp_start_index + exp_end_index].rtoken != rtoken::Rtoken::OnFunctionFail {
+                    return Err((format!("Unexpected token \"{}\" after expression!", &line.content[exp_start_index+exp_end_index].original),
+                                Some(line.content[exp_start_index+exp_end_index].clone())),
+                    );
+                }
+            }
+
+            execute_assignment(&assign, &v, &info, data, repl_mode);
+
+            // Executes jump
+            return match ret.jump_to {
+                Option::None    => Ok(None),
+                Option::Some(s) => Ok(Some(s)),
+            };
+        },
+        Err((string, opt_word)) => {
+            if opt_word.is_some() {
+                let word = opt_word.unwrap();
+
+                return Err((string, Some(word)));
+            }
+
+            return Err((string, None));
+        }
+    }
+}
+
 /// # Description
 /// Main way of running runk code.
 ///
@@ -162,94 +229,89 @@ fn load_lables<'a>(lines: &'a [line::Line],
 /// If the data are comming from the standard input pass "<stdin>"
 /// - `data`: Runtime data of a runk program. A this time the function expects data to be uninitialized.
 /// TODO add init to data constructor.
-pub fn run_runk_buffer(input_file_reader: Box<dyn BufRead>,
-                       file_name: &str,
-                       data: &mut program_data::ProgramData,
-                       _repel_mode: bool) {
-    let mut index = 0;
-    let mut info = source_info::SourceInfo::new(index, &file_name, &file_name); // TODO add text
-    let lines: Vec<line::Line> = match parser::parse_file(input_file_reader, &file_name[..]) {
-        Err((err, _line_num)) => {
-            fatal_error(&info, err, None);
-        },
-        Ok(l) => l,
-    };
+/// TODO make compatible with C.
+#[no_mangle]
+pub extern "C" fn run_runk_buffer(mut input_file_reader: Box<dyn BufRead>,
+                                  file_name: &str,
+                                  data: &mut program_data::ProgramData,
+                                  repl_mode: bool) {
+    let mut index            = 0;
+    let mut info             = source_info::SourceInfo::new(index, &file_name, String::new()); // TODO add text
+    let mut lines            = Vec::<line::Line>::new();
+    let mut file_line_number = 0;
+    let mut opt_jump_lab: Option<String> = None;
 
-    match load_lables(&lines, &mut data.lables) {
-        Ok(n) => {
-            if data.debug {
-                eprintln!("Found {} lables", n);
+    // match load_lables(&lines, &mut data.lables) {
+    //     Ok(n) => {
+    //         if data.debug {
+    //             eprintln!("Found {} lables", n);
+    //         }
+    //     },
+    //     Err((s, w)) => {
+    //         info.line_number = w.line;
+    //         info.original = &lines[w.parsed_line].original;
+    //         fatal_error(&info, s, Some(&w));
+    //     }
+    // }
+
+    // (Re)inicialize program data.
+    data.add_primitive_functions();
+    data.add_special_variables();
+
+    // Read, evaluate, print loop.
+    loop {
+        // Try to resolve a pending jump if there is one.
+        if let Some(str_lab) = opt_jump_lab {
+            eprintln!("some");
+            opt_jump_lab = None;
+            // It's ok if the lable wasn't found yet, we will continue parsing the file without
+            // exectin it until it is found.
+            match data.lables.get(&str_lab) {
+                Some(i) => index = *i,
+                None => {},
             }
-        },
-        Err((s, w)) => {
-            info.line_number = w.line;
-            info.original = &lines[w.parsed_line].original;
-            fatal_error(&info, s, Some(&w));
         }
-    }
+        info.line_number = file_line_number;
 
-    // looping through every (assignment +) expression.
-    while index != lines.len() {
-        info.line_number = lines[index].line_number;
-        info.original = &lines[index].original;
-
-        if data.debug {
-            eprint!("{}", format!("RUN {}\t| ", &info.line_number).bright_yellow());
-            eprint!("{} ", lines[index]);
-            eprintln!("");
-        }
-
-        data.add_primitive_functions();
-        data.add_special_variables();
-
-        // Splitting assignment and expression
-        let (assign, exp_start_index) = match preprocess_assignment(&lines[index].content[..]) {
-            Ok(tuple) => tuple,
-            Err((s, w)) => fatal_error(&info, s, Some(&w)),
-        };
-        // Resolves expressions and returns a value;
-        let (ret, exp_end_index) = resolve_exp(&lines[index].content[exp_start_index..], &info, data);
-
-        // Assigns the value from the expression
-        match ret.var {
-            Ok(v) => {
-                // If line continues beyon what was processed indicates there are incorrect
-                // and unneeded tokens following it. (resolve_exp ends when the literal
-                // is complete or in case of functions, when the nesting stacks is empty).
-                if exp_start_index + exp_end_index < lines[index].content.len() {
-                    // Special exception for when the line ends with an unprocessed OnFunctionFail token,
-                    // because checking that without processing it would be dirtier than this hack.
-                    if lines[index].content[exp_start_index + exp_end_index].rtoken != rtoken::Rtoken::OnFunctionFail {
-                        fatal_error(&info,
-                                    format!("Unexpected token \"{}\" after expression!", &lines[index].content[exp_start_index+exp_end_index].original),
-                                    Some(&lines[index].content[exp_start_index+exp_end_index]),
-                        );
+        // Read and parse another line if not running through lines that were already parsed.
+        if index+1 > lines.len() || lines.len() == 0 {
+            match parser::parse_file(&mut input_file_reader, &file_name[..], index+1, repl_mode) {
+                ParseResult::Err(err, _line_num) => {
+                    fatal_error(&info, err, None);
+                },
+                ParseResult::Ok(line, relative_line_number) => {
+                    file_line_number += relative_line_number;
+                    if line.content.len() == 0 {
+                        continue;
                     }
-                }
-
-                execute_assignment(&assign, &v, &info, data);
-
-                // Executes jump
-                index = match ret.jump_to {
-                    Option::None => index+1,
-                    Option::Some(s) => {
-                        match data.lables.get(&s) {
-                            None => fatal_error(&info, format!("Attempted to jump to an undefined lable \"{}\"", s), None),
-                            Some(i) => *i,
-                        }
-                    },
-                };
-            },
-            Err((string, opt_word)) => {
-                if opt_word.is_some() {
-                    let word = opt_word.unwrap();
-
-                    fatal_error(&info, string, Some(&word));
-                }
-
-                fatal_error(&info, string, None);
-            }
+                    lines.push(line);
+                },
+                ParseResult::Eof => {
+                    if let Some(str_lab) = opt_jump_lab {
+                        fatal_error(&info, format!("Lable \"{}\" not found.", str_lab.italic()),
+                                    None);
+                    }
+                    break
+                },
+            };
         }
+
+        if opt_jump_lab.is_none() {
+            let line = &lines[index];
+            info.original = line.original.clone(); // TODO borrow
+
+            match run_runk_line(&lines[index], &info, data, repl_mode){
+                Ok(opt_str_lab) => {opt_jump_lab = opt_str_lab; eprintln!("jumpt to");},
+                Err((string, opt_word)) => {
+                    if let Some(w) = opt_word {
+                        fatal_error(&info, string, Some(&w));
+                    }
+                    fatal_error(&info, string, None);
+                },
+            };
+        }
+
+        index += 1;
     }
 
     if data.debug {

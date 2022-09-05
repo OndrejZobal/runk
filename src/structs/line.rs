@@ -7,15 +7,17 @@ pub struct Line<'a> {
     pub line_number: usize,
     pub content: Vec<word::Word>,
     pub original: String,
+    pub is_last: bool,
 }
 
 impl Line<'_> {
-    pub fn new<'a>(file_name: &'a str, line_number: usize) -> Line<'a> {
+    pub fn new<'a>(file_name: &'a str, line_number: usize, is_last: bool) -> Line<'a> {
         Line {
             file_name: file_name,
             line_number: line_number,
             content: Vec::new(),
             original: String::new(),
+            is_last: is_last,
         }
     }
 }

@@ -4,16 +4,7 @@ use std::io::{self, BufReader, BufRead};
 use isatty::stdin_isatty;
 use colored::Colorize;
 
-use structs::{program_data};
-
-//use clap::Parser;
-
-mod runk;
-mod parser;
-mod structs;
-mod expressions;
-#[macro_use]
-mod prints;
+use runk::structs::program_data;
 
 fn platform_eof_key() -> String {
         #[cfg(target_family = "unix")]
@@ -81,7 +72,7 @@ fn main() {
             match file {
                 Ok(f) => Box::new(BufReader::new(f)),
                 Err(e) => {
-                    color_print!("Error: ", red bold);
+                    runk::color_print!("Error: ", red bold);
                     eprintln!("cannot read file \"{}\": {}", filename.italic(), e);
                     std::process::exit(1);
                 }
