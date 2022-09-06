@@ -261,14 +261,15 @@ pub extern "C" fn run_runk_buffer(mut input_file_reader: Box<dyn BufRead>,
     // Read, evaluate, print loop.
     loop {
         // Try to resolve a pending jump if there is one.
-        if let Some(str_lab) = opt_jump_lab {
-            eprintln!("some");
-            opt_jump_lab = None;
+        if let Some(str_lab) = opt_jump_lab.clone() {
             // It's ok if the lable wasn't found yet, we will continue parsing the file without
             // exectin it until it is found.
             match data.lables.get(&str_lab) {
-                Some(i) => index = *i,
-                None => {},
+                Some(i) => {
+                    index = *i;
+                    opt_jump_lab = None;
+                },
+                None    => {},
             }
         }
         info.line_number = file_line_number;
@@ -296,12 +297,26 @@ pub extern "C" fn run_runk_buffer(mut input_file_reader: Box<dyn BufRead>,
             };
         }
 
-        if opt_jump_lab.is_none() {
-            let line = &lines[index];
-            info.original = line.original.clone(); // TODO borrow
+        let line = &lines[index];
+        info.original = line.original.clone();
 
+        // Look for lable declarations
+        if line.content.len() == 1 {
+            if let rtoken::Rtoken::LableLiteral(lable) = &line.content[0].rtoken {
+                if let Some(i) = data.lables.get(&lable[..]) {
+                    if *i != index {
+                        fatal_error(&info, format!("Redefinition of lable \"{}\".", &lable), Some(&line.content[0]));
+                    }
+                }
+
+            data.lables.insert(lable.clone(), index);
+            }
+        }
+
+        // Run current line if we're currently not seeking a lable to jump to.
+        if opt_jump_lab.is_none() {
             match run_runk_line(&lines[index], &info, data, repl_mode){
-                Ok(opt_str_lab) => {opt_jump_lab = opt_str_lab; eprintln!("jumpt to");},
+                Ok(opt_str_lab)         => { opt_jump_lab = opt_str_lab },
                 Err((string, opt_word)) => {
                     if let Some(w) = opt_word {
                         fatal_error(&info, string, Some(&w));
@@ -311,6 +326,7 @@ pub extern "C" fn run_runk_buffer(mut input_file_reader: Box<dyn BufRead>,
             };
         }
 
+        // Move to the next line.
         index += 1;
     }
 

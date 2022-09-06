@@ -24,9 +24,7 @@ Copyright {}
  This is Free Software licensed under GNU GPL-3.0 or any later version.
  No warranty is provided, failures are guaranteed!
 
- Since {} relies on jumping to lables including jumps forward in code, the
- interpreter needs to see the entire file before execution begins. To signal EOF
- press {}.
+ To signal end of file press {}.
 
  Long live Ronald!\
 ",
@@ -34,7 +32,6 @@ Copyright {}
             env!("CARGO_PKG_VERSION"),
             env!("CARGO_PKG_DESCRIPTION"),
             env!("CARGO_PKG_AUTHORS"),
-            env!("CARGO_PKG_NAME"),
             env!("CARGO_PKG_NAME"),
             format!("Ctrl+{}", platform_eof_key()).bold(),
     );
