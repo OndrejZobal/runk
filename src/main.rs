@@ -16,9 +16,17 @@ fn platform_eof_key() -> String {
         return format!("c");
     }
 
+fn print_version() {
+    eprintln!("{} version {} - {}",
+              format!("{}", env!("CARGO_PKG_NAME")).bold(),
+              env!("CARGO_PKG_VERSION"),
+              env!("CARGO_PKG_DESCRIPTION"),
+    );
+}
+
 fn print_repl_banner() {
+    print_version();
     eprintln!("\
-{} version {} - {},
 Copyright {}
 
  {} is an interpreter and a programming language visit
@@ -31,9 +39,6 @@ Copyright {}
 
  Long live Ronald!\
 ",
-            format!("{}", env!("CARGO_PKG_NAME")).bold(),
-            env!("CARGO_PKG_VERSION"),
-            env!("CARGO_PKG_DESCRIPTION"),
             env!("CARGO_PKG_AUTHORS"),
             env!("CARGO_PKG_NAME"),
             format!("Ctrl+{}", platform_eof_key()).bold(),
@@ -56,6 +61,10 @@ fn main() {
             debug = true;
             args.remove(i);
             break;
+        }
+        if arg == "--version" && i != 0 {
+            print_version();
+            process::exit(0);
         }
     }
 
