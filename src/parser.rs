@@ -68,7 +68,7 @@ fn parse_string(s: &str) -> Option<(rtoken::Rtoken, Option<OpCancel>)> {
                             }))
     )}
     if s == ")"  { return Some((rtoken::Rtoken::FunctionEnd, None)) }
-    if s == "->" { return Some((rtoken::Rtoken::OnFunctionFail, None)) }
+    if s == "else" { return Some((rtoken::Rtoken::OnFunctionFail, None)) }
 
     // Data types
     // Integer

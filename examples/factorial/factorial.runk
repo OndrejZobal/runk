@@ -6,7 +6,7 @@
 (err "Calculate factorial of: ")
 Txt input: (in)
 (goif (= $input "exit") !end)
-Nat n: (nat $input) -> !input
+Nat n: (nat $input) else !input
 Nat fact: 1
 
 (goif (not (= $n 0)) !loop)

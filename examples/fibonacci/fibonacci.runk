@@ -6,7 +6,7 @@
 # This section will repeat until the user enters a valid number
 !input                                              # "Input" lable
 "Calculate until: "
-Nat max: (nat (in)) -> !input                       # Reads a number from stdin, if input is not a number, then it jumps to !input again
+Nat max: (nat (in)) else !input                     # Reads a number from stdin, if input is not a number, then it jumps to !input again
 
 Int n1: 1
 Int n2: 0

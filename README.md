@@ -131,7 +131,7 @@ If any value is returned and not assigned to any variable, it will be sent to st
 
 ### Function Replacement
 Some functions can fail, this will usually result in the program exiting but
-it doesn't have to. I you anticipate that a function might fail you can use the "->"
+it doesn't have to. I you anticipate that a function might fail you can use the "else"
 token to specify a function replacement action. This action can either be another
 function call who's return value will be assigned in place of the original
 function, or a label in which case the interpreter will immediately jump to this label
@@ -142,9 +142,9 @@ You can chain as many function replacements as you would like.
 ```runk
 !input
 "Enter an integer: "
-Int value: (int (in)) -> !input
+Int value: (int (in)) else !input
 
-Nat num: (/ 1 0) -> (/ 4 (- 2 2)) -> (* 2 2)
+Nat num: (/ 1 0) else (/ 4 (- 2 2)) else (* 2 2)
 ```
 
 See the [full list of functions](docs/function-list.md).
