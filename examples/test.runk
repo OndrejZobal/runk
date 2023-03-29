@@ -57,11 +57,11 @@ Int helper: 0
 Nat order: 1
 
 Lab lable: !loop
-!loop                                               # A lable to return to at the beginning of every iteration.
+!loop                                               # A label to return to at the beginning of every iteration.
 (line $order "th Fibonacci number is: " $n2 "!")    # Prints previous number.
-helper: $n1                                         # Saving current number to herlper
+helper: $n1                                         # Saving current number to helper
 n1: (+ $n1 $n2)                                     # Sets current number to: current number + previous number
-n2: $helper                                         # Copyies helper into previous number
+n2: $helper                                         # Copies helper into previous number
 order: (+ $order 1)                                 # Increment order.
 (goif (<= $order $max) $lable)                      # Jumps if condition is not equal to zero. 
 
